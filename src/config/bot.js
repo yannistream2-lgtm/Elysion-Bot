@@ -24,7 +24,7 @@ export const botConfig = {
     activities: [
       {
         name: "Custom Status", // required by Discord API, not shown in the client
-        state: "https://discord.gg/yY8TcFjz3B",     // this is what people actually see
+        state: "Elysion | Age of Heroes",     // this is what people actually see
         type: 4,               // Custom
       },
     ],
