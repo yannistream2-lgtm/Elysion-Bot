@@ -19,12 +19,12 @@ export { calculationContexts };
 export default {
     data: new SlashCommandBuilder()
         .setName("calculate")
-        .setDescription("Evaluate a mathematical expression")
+        .setDescription("Évaluer une expression mathématique")
         .addStringOption((option) =>
             option
                 .setName("expression")
                 .setDescription(
-                    "The mathematical expression to evaluate (e.g., 2+2*3, sin(45 deg), 16^0.5)",
+                    "L'expression mathématique à évaluer (ex. : 2+2*3, sin(45 deg), 16^0.5)",
                 )
                 .setRequired(true),
         ),
@@ -32,7 +32,7 @@ export default {
     async execute(interaction) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
-            logger.warn(`Calculate interaction defer failed`, {
+            logger.warn(`Échec du report de l'interaction Calculate`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 commandName: 'calculate'
@@ -47,9 +47,9 @@ export default {
         ) {
             return await replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: '**Contains unsupported characters.**\n\n' +
-                    '✅ Supported: Numbers, decimals, + - * / ^ %, sin cos tan sqrt abs log exp, pi e, ()\n' +
-                    '❌ Not supported: Brackets, curly braces, and other symbols'
+                message: '**L\'expression contient des caractères non pris en charge.**\n\n' +
+                    '✅ **Pris en charge :** Nombres, décimales, + - * / ^ %, sin cos tan sqrt abs log exp, pi e, ()\n' +
+                    '❌ **Non pris en charge :** Crochets, accolades et autres symboles'
             });
         }
 
@@ -66,9 +66,9 @@ export default {
             if (pattern.test(expression)) {
                 return await replyUserError(interaction, {
                     type: ErrorTypes.VALIDATION,
-                    message: '**Contains blocked code patterns.**\n\n' +
-                        '🚫 **Blocked:** import, require, eval, Function, setTimeout, setInterval, process, fs, document, window, fetch, loops, async/await\n\n' +
-                        'Code-like syntax is not allowed in calculations.'
+                    message: '**L\'expression contient du code bloqué.**\n\n' +
+                        '🚫 **Bloqué :** import, require, eval, Function, setTimeout, setInterval, process, fs, document, window, fetch, boucles, async/await\n\n' +
+                        'La syntaxe ressemblant à du code n\'est pas autorisée dans les calculs.'
                 });
             }
         }
@@ -79,7 +79,7 @@ export default {
 
             let formattedResult;
             if (typeof result === "number") {
-                formattedResult = result.toLocaleString("en-US", {
+                formattedResult = result.toLocaleString("fr-FR", {
                     maximumFractionDigits: 10,
                 });
 
@@ -90,9 +90,9 @@ export default {
                     formattedResult = result.toExponential(6);
                 }
             } else if (typeof result === "boolean") {
-                formattedResult = result ? "true" : "false";
+                formattedResult = result ? "vrai" : "faux";
             } else if (result === null || result === undefined) {
-                formattedResult = "No result";
+                formattedResult = "Aucun résultat";
             } else if (
                 Array.isArray(result) ||
                 typeof result === "object"
@@ -138,15 +138,15 @@ export default {
                     .setStyle(ButtonStyle.Primary),
                 new ButtonBuilder()
                     .setCustomId(`calc_${interaction.id}_history`)
-                    .setLabel("History")
+                    .setLabel("Historique")
                     .setStyle(ButtonStyle.Secondary),
             );
 
             const embed = successEmbed(
-                "🧮 Calculation Result",
-                `**Expression:** \`${expression.replace(/`/g, "\`")}\`\n` +
-                    `**Result:** \`${formattedResult}\`\n\n` +
-                    `*Use the buttons below to perform operations with the result.*`,
+                "🧮 Résultat du calcul",
+                `**Expression :** \`${expression.replace(/`/g, "\`")}\`\n` +
+                    `**Résultat :** \`${formattedResult}\`\n\n` +
+                    `*Utilisez les boutons ci-dessous pour effectuer des opérations avec le résultat.*`,
             );
 
             await InteractionHelper.safeEditReply(interaction, {
@@ -178,7 +178,7 @@ export default {
 
                         if (userHistory.length === 0) {
                             await i.followUp({
-                                content: "No calculation history found.",
+                                content: "Aucun historique de calcul trouvé.",
                                 flags: ["Ephemeral"],
                             });
                             return;
@@ -193,7 +193,7 @@ export default {
                             .join("\n\n");
 
                         await i.followUp({
-                            content: `📜 **Your Calculation History**\n\n${historyText}`,
+                            content: `📜 **Votre historique de calcul**\n\n${historyText}`,
                             flags: ["Ephemeral"],
                         });
                         return;
@@ -229,7 +229,7 @@ export default {
 
                         await i.showModal({
                             customId: `calc_modal:${operation}`,
-                            title: `Enter a number to ${operation}`,
+                            title: `Entrez un nombre à ${operation}`,
                             components: [
                                 {
                                     type: 1,
@@ -237,8 +237,8 @@ export default {
                                         {
                                             type: 4,
                                             customId: `operand:${contextKey}`,
-                                            label: `Number to ${operator} with ${formattedResult}`,
-                                            placeholder: "Enter a number...",
+                                            label: `Nombre à ${operator} avec ${formattedResult}`,
+                                            placeholder: "Entrez un nombre...",
                                             style: 1,
                                             required: true,
                                             maxLength: 50,
@@ -248,10 +248,10 @@ export default {
                             ],
                         });
                     } catch (modalError) {
-                        logger.error("Failed to show modal:", modalError);
+                        logger.error("Échec de l'affichage du formulaire :", modalError);
                         if (!i.replied && !i.deferred) {
                             await i.reply({
-                                content: "Failed to open calculator. Please try again.",
+                                content: "Impossible d'ouvrir la calculatrice. Veuillez réessayer.",
                                 flags: ["Ephemeral"],
                             }).catch(console.error);
                         }
@@ -259,10 +259,10 @@ export default {
                     }
 
                 } catch (error) {
-                    logger.error("Button interaction error:", error);
+                    logger.error("Erreur lors de l'interaction avec le bouton :", error);
                     if (!i.deferred && !i.replied) {
                         await i.followUp({
-                            content: "An error occurred while processing your request.",
+                            content: "Une erreur est survenue lors du traitement de votre demande.",
                             flags: ["Ephemeral"],
                         }).catch(console.error);
                     }
@@ -277,7 +277,7 @@ export default {
                                 .setCustomId(
                                     `calc_${interaction.id}_expired`,
                                 )
-                                .setLabel("Calculator Expired")
+                                .setLabel("Calculatrice expirée")
                                 .setStyle(ButtonStyle.Secondary)
                                 .setDisabled(true),
                         );
@@ -286,7 +286,7 @@ export default {
                         .editReply({
                             components: [disabledRow],
                             content:
-                                "⏱️ This calculator has expired. Use the command again to perform more calculations.",
+                                "⏱️ Cette calculatrice a expiré. Utilisez à nouveau la commande pour effectuer d'autres calculs.",
                         })
                         .catch(console.error);
                 } else {
@@ -304,26 +304,26 @@ export default {
                 }
             });
         } catch (error) {
-            logger.error('Calculation error:', error);
+            logger.error('Erreur de calcul :', error);
 
-            let errorMessage = 'Failed to evaluate the expression.';
+            let errorMessage = 'Impossible d\'évaluer l\'expression.';
 
             if (error.message.includes('Unexpected type')) {
                 errorMessage +=
-                    'The expression contains an unsupported operation or function.';
+                    ' L\'expression contient une opération ou une fonction non prise en charge.';
             } else if (error.message.includes('Undefined symbol')) {
                 errorMessage +=
-                    'The expression contains an undefined variable or function.';
+                    ' L\'expression contient une variable ou une fonction indéfinie.';
             } else if (error.message.includes('Brackets not balanced')) {
-                errorMessage += 'The expression has unbalanced brackets.';
+                errorMessage += ' L\'expression contient des parenthèses déséquilibrées.';
             } else if (
                 error.message.includes('Unexpected operator') ||
                 error.message.includes('Unexpected character')
             ) {
                 errorMessage +=
-                    'The expression contains an invalid operator or character.';
+                    ' L\'expression contient un opérateur ou un caractère invalide.';
             } else {
-                errorMessage += 'Please check the syntax and try again.';
+                errorMessage += ' Vérifiez la syntaxe et réessayez.';
             }
 
             await replyUserError(interaction, {
