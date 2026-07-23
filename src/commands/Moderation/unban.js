@@ -8,66 +8,94 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
-        .setDescription("Unban a user from the server")
+        .setDescription("Retirer le bannissement d'un utilisateur du serveur")
+
         .addStringOption(option =>
             option
                 .setName("target")
-                .setDescription("The ID (or mention) of the user to unban")
+                .setDescription("L'ID ou la mention de l'utilisateur à débannir")
                 .setRequired(true),
         )
+
         .addStringOption(option =>
-            option.setName("reason")
-                .setDescription("Reason for the unban")
+            option
+                .setName("reason")
+                .setDescription("Raison du débannissement")
                 .setRequired(false),
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+
+        .setDefaultMemberPermissions(
+            PermissionFlagsBits.BanMembers
+        ),
+
     category: "moderation",
 
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        const deferSuccess =
+            await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
-            logger.warn(`Unban interaction defer failed`, {
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
-                commandName: 'unban',
-            });
+            logger.warn(
+                `Échec du defer de l'interaction Unban`,
+                {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'unban',
+                }
+            );
+
             return;
         }
 
-        const rawTarget = interaction.options.getString("target");
-        const targetId = rawTarget.replace(/[<@!>]/g, '').trim();
+        const rawTarget =
+            interaction.options.getString("target");
+
+        const targetId =
+            rawTarget
+                .replace(/[<@!>]/g, '')
+                .trim();
 
         if (!/^\d{17,20}$/.test(targetId)) {
             return replyUserError(interaction, {
                 type: ErrorTypes.USER_INPUT,
-                message: 'Please provide a valid user ID or mention.',
+                message: 'Veuillez fournir un ID utilisateur ou une mention valide.',
             });
         }
 
-        const targetUser = await client.users.fetch(targetId).catch(() => null);
+        const targetUser =
+            await client.users
+                .fetch(targetId)
+                .catch(() => null);
+
         if (!targetUser) {
             return replyUserError(interaction, {
                 type: ErrorTypes.USER_INPUT,
-                message: `Could not find a user with the ID \`${targetId}\`.`,
+                message: `Impossible de trouver un utilisateur avec l'ID \`${targetId}\`.`,
             });
         }
 
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const reason =
+            interaction.options.getString("reason") ||
+            "Aucune raison fournie";
 
-        const result = await ModerationService.unbanUser({
-            guild: interaction.guild,
-            user: targetUser,
-            moderator: interaction.member,
-            reason,
-        });
+        const result =
+            await ModerationService.unbanUser({
+                guild: interaction.guild,
+                user: targetUser,
+                moderator: interaction.member,
+                reason,
+            });
 
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                successEmbed(
-                    "✅ User Unbanned",
-                    `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
-                ),
-            ],
-        });
+        await InteractionHelper.safeEditReply(
+            interaction,
+            {
+                embeds: [
+                    successEmbed(
+                        "✅ Utilisateur débanni",
+                        `**${targetUser.tag}** a été débanni avec succès du serveur.\n\n**Raison :** ${reason}\n**ID du cas :** #${result.caseId}`,
+                    ),
+                ],
+            }
+        );
     },
 };
