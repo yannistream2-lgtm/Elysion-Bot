@@ -5,18 +5,23 @@ import { InteractionHelper } from '../../../utils/interactionHelper.js';
 export default {
     async execute(interaction) {
         const query = interaction.options.getString('query');
+
         const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
         const embed = createEmbed({
-            title: 'Google Search',
-            description: `[Search for "${query}"](${searchUrl})`,
+            title: 'Recherche Google',
+            description: `[Rechercher « ${query} »](${searchUrl})`,
             color: 'info'
         })
-        .setFooter({ text: 'Google Search Results' });
+            .setFooter({
+                text: 'Résultats de recherche Google'
+            });
 
-        await InteractionHelper.safeReply(interaction, { embeds: [embed] });
+        await InteractionHelper.safeReply(interaction, {
+            embeds: [embed]
+        });
 
-        logger.info('Google search link generated', {
+        logger.info('Lien de recherche Google généré', {
             userId: interaction.user.id,
             query: query,
             guildId: interaction.guildId,
