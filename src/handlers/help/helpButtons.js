@@ -23,7 +23,7 @@ export const helpBackButton = {
             });
         } catch (error) {
             if (error?.code === 40060 || error?.code === 10062) {
-                logger.warn('Help back button interaction already acknowledged or expired.', {
+                logger.warn('L\'interaction du bouton retour de l\'aide a déjà été traitée ou a expiré.', {
                     event: 'interaction.help.button.unavailable',
                     errorCode: String(error.code),
                     customId: interaction.customId,
@@ -41,27 +41,29 @@ export const helpBugReportButton = {
     name: BUG_REPORT_BUTTON_ID,
     async execute(interaction, client) {
         const githubButton = new ButtonBuilder()
-            .setLabel('🐛 Report Bug on GitHub')
+            .setLabel('🐛 Signaler un bug sur GitHub')
             .setStyle(ButtonStyle.Link)
             .setURL('https://github.com/codebymitch/TitanBot/issues');
 
         const bugRow = new ActionRowBuilder().addComponents(githubButton);
 
         const bugReportEmbed = createEmbed({
-            title: '🐛 Bug Report',
-            description: 'Found a bug? Please report it on our GitHub Issues page!\n\n' +
-                '**When reporting a bug, please include:**\n' +
-                '• 📝 Detailed description of the issue\n' +
-                '• 📋 Steps to reproduce the problem\n' +
-                '• 📸 Screenshots if applicable\n' +
-                '• 💻 Your bot version and environment\n\n' +
-                'This helps us fix issues faster and more effectively!',
+            title: '🐛 Rapport de bug',
+            description: 'Vous avez trouvé un bug ? Veuillez le signaler sur notre page GitHub Issues !\n\n' +
+                '**Lors du signalement d\'un bug, veuillez inclure :**\n' +
+                '• 📝 Une description détaillée du problème\n' +
+                '• 📋 Les étapes pour reproduire le problème\n' +
+                '• 📸 Des captures d\'écran si nécessaire\n' +
+                '• 💻 La version de votre bot et votre environnement\n\n' +
+                'Cela nous aide à corriger les problèmes plus rapidement et plus efficacement !',
             color: 'error'
         });
+
         bugReportEmbed.setFooter({
-            text: 'TitanBot Bug Reporting System',
+            text: 'Système de signalement des bugs de TitanBot',
             iconURL: client.user.displayAvatarURL()
         });
+
         bugReportEmbed.setTimestamp();
 
         await interaction.reply({
@@ -77,7 +79,8 @@ function getPaginationInfo(components) {
         for (const component of row.components || []) {
             if (component.customId === `${PAGINATION_PREFIX}_page`) {
                 const label = component.label || '';
-                const match = label.match(/Page\s+(\d+)\s+of\s+(\d+)/i);
+                const match = label.match(/Page\s+(\d+)\s+sur\s+(\d+)/i);
+
                 if (match) {
                     return {
                         currentPage: Number(match[1]),
@@ -102,19 +105,24 @@ export const helpPaginationButton = {
             const { currentPage, totalPages } = getPaginationInfo(interaction.message?.components);
 
             let nextPage = currentPage;
+
             switch (interaction.customId) {
                 case `${PAGINATION_PREFIX}_first`:
                     nextPage = 1;
                     break;
+
                 case `${PAGINATION_PREFIX}_prev`:
                     nextPage = Math.max(1, currentPage - 1);
                     break;
+
                 case `${PAGINATION_PREFIX}_next`:
                     nextPage = Math.min(totalPages, currentPage + 1);
                     break;
+
                 case `${PAGINATION_PREFIX}_last`:
                     nextPage = totalPages;
                     break;
+
                 default:
                     nextPage = currentPage;
                     break;
@@ -122,9 +130,10 @@ export const helpPaginationButton = {
 
             const { embeds, components } = await createAllCommandsMenu(nextPage, client);
             await interaction.editReply({ embeds, components });
+
         } catch (error) {
             if (error?.code === 40060 || error?.code === 10062) {
-                logger.warn('Help pagination interaction already acknowledged or expired.', {
+                logger.warn('L\'interaction de pagination de l\'aide a déjà été traitée ou a expiré.', {
                     event: 'interaction.help.pagination.unavailable',
                     errorCode: String(error.code),
                     customId: interaction.customId,
