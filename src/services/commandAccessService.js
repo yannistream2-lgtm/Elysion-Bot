@@ -14,12 +14,17 @@ function normalizeToggleRecord(raw) {
   }
 
   if (Array.isArray(raw)) {
-    return Object.fromEntries(raw.map((entry) => [String(entry).toLowerCase(), true]));
+    return Object.fromEntries(
+      raw.map((entry) => [String(entry).toLowerCase(), true])
+    );
   }
 
   if (typeof raw === 'object') {
     return Object.fromEntries(
-      Object.entries(raw).map(([key, value]) => [String(key).toLowerCase(), Boolean(value)]),
+      Object.entries(raw).map(([key, value]) => [
+        String(key).toLowerCase(),
+        Boolean(value)
+      ])
     );
   }
 
@@ -47,36 +52,45 @@ export function buildCommandRegistry(client) {
       });
     }
 
-    // Add the main command
+    // Ajouter la commande principale
     categories.get(categoryKey).commands.push({
       name: command.data.name,
-      description: command.data.description || 'No description',
-      protected: PROTECTED_COMMANDS.has(command.data.name.toLowerCase()),
+      description: command.data.description || 'Aucune description',
+      protected: PROTECTED_COMMANDS.has(
+        command.data.name.toLowerCase()
+      ),
       isSubcommand: false,
     });
 
-    // Add subcommands if they exist
+    // Ajouter les sous-commandes si elles existent
     const commandJson = command.data.toJSON?.() || {};
 
     for (const option of commandJson.options || []) {
+
+      // Sous-commande simple
       if (option.type === 1) {
-        const subcommandName = `${command.data.name} ${option.name}`;
+        const subcommandName =
+          `${command.data.name} ${option.name}`;
+
         categories.get(categoryKey).commands.push({
           name: subcommandName,
-          description: option.description || 'No description',
+          description: option.description || 'Aucune description',
           protected: false,
           isSubcommand: true,
           parentCommand: command.data.name,
         });
       }
 
+      // Groupe de sous-commandes
       if (option.type === 2) {
         for (const sub of option.options || []) {
           if (sub.type === 1) {
-            const subcommandName = `${command.data.name} ${option.name} ${sub.name}`;
+            const subcommandName =
+              `${command.data.name} ${option.name} ${sub.name}`;
+
             categories.get(categoryKey).commands.push({
               name: subcommandName,
-              description: sub.description || 'No description',
+              description: sub.description || 'Aucune description',
               protected: false,
               isSubcommand: true,
               parentCommand: command.data.name,
@@ -88,7 +102,9 @@ export function buildCommandRegistry(client) {
   }
 
   for (const category of categories.values()) {
-    category.commands.sort((a, b) => a.name.localeCompare(b.name));
+    category.commands.sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
   }
 
   return categories;
@@ -101,94 +117,183 @@ export function getCategoryRegistry(client, categoryKey = null) {
     return registry;
   }
 
-  return registry.get(normalizeCategoryKey(categoryKey)) || null;
+  return (
+    registry.get(normalizeCategoryKey(categoryKey)) ||
+    null
+  );
 }
 
 export function isProtectedCommand(commandName) {
-  return PROTECTED_COMMANDS.has(String(commandName || '').toLowerCase());
+  return PROTECTED_COMMANDS.has(
+    String(commandName || '').toLowerCase()
+  );
 }
 
-export function isCommandEnabledInConfig(config, commandName, category) {
-  const normalizedName = String(commandName || '').toLowerCase();
+export function isCommandEnabledInConfig(
+  config,
+  commandName,
+  category
+) {
+  const normalizedName =
+    String(commandName || '').toLowerCase();
 
-  // Check if it's a subcommand (contains space)
-  const isSubcommand = normalizedName.includes(' ');
-  const baseCommand = isSubcommand ? normalizedName.split(' ')[0] : normalizedName;
+  // Vérifier s'il s'agit d'une sous-commande
+  // (contient un espace)
+  const isSubcommand =
+    normalizedName.includes(' ');
 
-  // Protected commands (only applies to base commands, not subcommands)
-  if (!isSubcommand && isProtectedCommand(baseCommand)) {
+  const baseCommand = isSubcommand
+    ? normalizedName.split(' ')[0]
+    : normalizedName;
+
+  // Les commandes protégées ne peuvent pas être désactivées
+  // Cela s'applique uniquement aux commandes principales
+  if (
+    !isSubcommand &&
+    isProtectedCommand(baseCommand)
+  ) {
     return true;
   }
 
-  const disabledCommands = normalizeToggleRecord(config?.disabledCommands);
-  const disabledCategories = normalizeToggleRecord(config?.disabledCategories);
+  const disabledCommands =
+    normalizeToggleRecord(config?.disabledCommands);
 
-  // Check if the specific command/subcommand is disabled
+  const disabledCategories =
+    normalizeToggleRecord(config?.disabledCategories);
+
+  // Vérifier si la commande ou sous-commande spécifique
+  // est désactivée
   if (disabledCommands[normalizedName]) {
     return false;
   }
 
-  // For subcommands, also check if the base command is disabled
-  if (isSubcommand && disabledCommands[baseCommand]) {
+  // Pour les sous-commandes, vérifier également
+  // si la commande principale est désactivée
+  if (
+    isSubcommand &&
+    disabledCommands[baseCommand]
+  ) {
     return false;
   }
 
-  // Check if the category is disabled
-  if (disabledCategories[normalizeCategoryKey(category)]) {
+  // Vérifier si la catégorie est désactivée
+  if (
+    disabledCategories[
+      normalizeCategoryKey(category)
+    ]
+  ) {
     return false;
   }
 
   return true;
 }
 
-export async function isCommandEnabled(client, guildId, commandName, category = null) {
-  const config = await getGuildConfig(client, guildId);
+export async function isCommandEnabled(
+  client,
+  guildId,
+  commandName,
+  category = null
+) {
+  const config =
+    await getGuildConfig(client, guildId);
+
   let resolvedCategory = category;
 
   if (!resolvedCategory) {
-    const command = client.commands.get(commandName);
-    resolvedCategory = command?.category || 'Core';
+    const command =
+      client.commands.get(commandName);
+
+    resolvedCategory =
+      command?.category || 'Core';
   }
 
-  return isCommandEnabledInConfig(config, commandName, resolvedCategory);
+  return isCommandEnabledInConfig(
+    config,
+    commandName,
+    resolvedCategory
+  );
 }
 
-export function getCommandAccessSnapshot(client, config) {
-  const registry = buildCommandRegistry(client);
-  const disabledCommands = normalizeToggleRecord(config?.disabledCommands);
-  const disabledCategories = normalizeToggleRecord(config?.disabledCategories);
+export function getCommandAccessSnapshot(
+  client,
+  config
+) {
+  const registry =
+    buildCommandRegistry(client);
+
+  const disabledCommands =
+    normalizeToggleRecord(
+      config?.disabledCommands
+    );
+
+  const disabledCategories =
+    normalizeToggleRecord(
+      config?.disabledCategories
+    );
 
   const categories = [];
 
   for (const category of registry.values()) {
-    const categoryDisabled = Boolean(disabledCategories[category.key]);
+    const categoryDisabled =
+      Boolean(
+        disabledCategories[category.key]
+      );
+
     const enabledCommands = [];
     const disabledCommandNames = [];
 
     for (const command of category.commands) {
-      const enabled = isCommandEnabledInConfig(config, command.name, category.folder);
+      const enabled =
+        isCommandEnabledInConfig(
+          config,
+          command.name,
+          category.folder
+        );
+
       if (enabled) {
-        enabledCommands.push(command.name);
+        enabledCommands.push(
+          command.name
+        );
       } else {
-        disabledCommandNames.push(command.name);
+        disabledCommandNames.push(
+          command.name
+        );
       }
     }
 
     categories.push({
       ...category,
       categoryDisabled,
-      enabledCount: enabledCommands.length,
-      disabledCount: disabledCommandNames.length,
-      totalCount: category.commands.length,
+      enabledCount:
+        enabledCommands.length,
+      disabledCount:
+        disabledCommandNames.length,
+      totalCount:
+        category.commands.length,
       enabledCommands,
       disabledCommandNames,
     });
   }
 
-  categories.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  categories.sort((a, b) =>
+    a.displayName.localeCompare(
+      b.displayName
+    )
+  );
 
-  const totalCommands = categories.reduce((sum, category) => sum + category.totalCount, 0);
-  const enabledTotal = categories.reduce((sum, category) => sum + category.enabledCount, 0);
+  const totalCommands =
+    categories.reduce(
+      (sum, category) =>
+        sum + category.totalCount,
+      0
+    );
+
+  const enabledTotal =
+    categories.reduce(
+      (sum, category) =>
+        sum + category.enabledCount,
+      0
+    );
 
   return {
     categories,
@@ -196,20 +301,45 @@ export function getCommandAccessSnapshot(client, config) {
     disabledCategories,
     totalCommands,
     enabledTotal,
-    disabledTotal: totalCommands - enabledTotal,
+    disabledTotal:
+      totalCommands - enabledTotal,
   };
 }
 
-async function persistAccessConfig(client, guildId, updates, context = {}) {
-  return updateGuildConfig(client, guildId, updates, context);
+async function persistAccessConfig(
+  client,
+  guildId,
+  updates,
+  context = {}
+) {
+  return updateGuildConfig(
+    client,
+    guildId,
+    updates,
+    context
+  );
 }
 
-export function resolveCommandTarget(client, commandName) {
-  const normalizedName = String(commandName || '').toLowerCase().trim();
-  const registry = buildCommandRegistry(client);
+export function resolveCommandTarget(
+  client,
+  commandName
+) {
+  const normalizedName =
+    String(commandName || '')
+      .toLowerCase()
+      .trim();
+
+  const registry =
+    buildCommandRegistry(client);
 
   for (const category of registry.values()) {
-    const match = category.commands.find((command) => command.name.toLowerCase() === normalizedName);
+    const match =
+      category.commands.find(
+        (command) =>
+          command.name.toLowerCase() ===
+          normalizedName
+      );
+
     if (match) {
       return match;
     }
@@ -218,106 +348,291 @@ export function resolveCommandTarget(client, commandName) {
   return null;
 }
 
-export async function disableCommand(client, guildId, commandName, context = {}) {
-  const normalizedName = String(commandName || '').toLowerCase().trim();
-  const target = resolveCommandTarget(client, normalizedName);
+export async function disableCommand(
+  client,
+  guildId,
+  commandName,
+  context = {}
+) {
+  const normalizedName =
+    String(commandName || '')
+      .toLowerCase()
+      .trim();
+
+  const target =
+    resolveCommandTarget(
+      client,
+      normalizedName
+    );
 
   if (!target) {
-    throw new Error(`Unknown command: \`${normalizedName}\`.`);
+    throw new Error(
+      `Commande inconnue : \`${normalizedName}\`.`
+    );
   }
 
-  if (!target.isSubcommand && isProtectedCommand(normalizedName)) {
-    throw new Error(`The \`${normalizedName}\` command cannot be disabled.`);
+  if (
+    !target.isSubcommand &&
+    isProtectedCommand(normalizedName)
+  ) {
+    throw new Error(
+      `La commande \`${normalizedName}\` ne peut pas être désactivée.`
+    );
   }
 
-  const config = await getGuildConfig(client, guildId, context);
-  const disabledCommands = normalizeToggleRecord(config?.disabledCommands);
+  const config =
+    await getGuildConfig(
+      client,
+      guildId,
+      context
+    );
+
+  const disabledCommands =
+    normalizeToggleRecord(
+      config?.disabledCommands
+    );
+
   disabledCommands[normalizedName] = true;
 
-  await persistAccessConfig(client, guildId, { disabledCommands }, context);
-  return { commandName: normalizedName, enabled: false };
+  await persistAccessConfig(
+    client,
+    guildId,
+    { disabledCommands },
+    context
+  );
+
+  return {
+    commandName: normalizedName,
+    enabled: false
+  };
 }
 
-export async function enableCommand(client, guildId, commandName, context = {}) {
-  const normalizedName = String(commandName || '').toLowerCase().trim();
-  const target = resolveCommandTarget(client, normalizedName);
+export async function enableCommand(
+  client,
+  guildId,
+  commandName,
+  context = {}
+) {
+  const normalizedName =
+    String(commandName || '')
+      .toLowerCase()
+      .trim();
+
+  const target =
+    resolveCommandTarget(
+      client,
+      normalizedName
+    );
 
   if (!target) {
-    throw new Error(`Unknown command: \`${normalizedName}\`.`);
+    throw new Error(
+      `Commande inconnue : \`${normalizedName}\`.`
+    );
   }
 
-  const config = await getGuildConfig(client, guildId, context);
-  const disabledCommands = normalizeToggleRecord(config?.disabledCommands);
+  const config =
+    await getGuildConfig(
+      client,
+      guildId,
+      context
+    );
+
+  const disabledCommands =
+    normalizeToggleRecord(
+      config?.disabledCommands
+    );
+
   delete disabledCommands[normalizedName];
 
-  await persistAccessConfig(client, guildId, { disabledCommands }, context);
-  return { commandName: normalizedName, enabled: true };
+  await persistAccessConfig(
+    client,
+    guildId,
+    { disabledCommands },
+    context
+  );
+
+  return {
+    commandName: normalizedName,
+    enabled: true
+  };
 }
 
-export async function disableCategory(client, guildId, categoryKey, context = {}) {
-  const normalizedKey = normalizeCategoryKey(categoryKey);
-  const category = getCategoryRegistry(client, normalizedKey);
+export async function disableCategory(
+  client,
+  guildId,
+  categoryKey,
+  context = {}
+) {
+  const normalizedKey =
+    normalizeCategoryKey(categoryKey);
+
+  const category =
+    getCategoryRegistry(
+      client,
+      normalizedKey
+    );
 
   if (!category) {
-    throw new Error(`Unknown category: \`${categoryKey}\`.`);
+    throw new Error(
+      `Catégorie inconnue : \`${categoryKey}\`.`
+    );
   }
 
-  const config = await getGuildConfig(client, guildId, context);
-  const disabledCategories = normalizeToggleRecord(config?.disabledCategories);
+  const config =
+    await getGuildConfig(
+      client,
+      guildId,
+      context
+    );
+
+  const disabledCategories =
+    normalizeToggleRecord(
+      config?.disabledCategories
+    );
+
   disabledCategories[normalizedKey] = true;
 
-  await persistAccessConfig(client, guildId, { disabledCategories }, context);
-  return { categoryKey: normalizedKey, displayName: category.displayName, enabled: false };
+  await persistAccessConfig(
+    client,
+    guildId,
+    { disabledCategories },
+    context
+  );
+
+  return {
+    categoryKey: normalizedKey,
+    displayName: category.displayName,
+    enabled: false
+  };
 }
 
-export async function enableCategory(client, guildId, categoryKey, context = {}) {
-  const normalizedKey = normalizeCategoryKey(categoryKey);
-  const category = getCategoryRegistry(client, normalizedKey);
+export async function enableCategory(
+  client,
+  guildId,
+  categoryKey,
+  context = {}
+) {
+  const normalizedKey =
+    normalizeCategoryKey(categoryKey);
+
+  const category =
+    getCategoryRegistry(
+      client,
+      normalizedKey
+    );
 
   if (!category) {
-    throw new Error(`Unknown category: \`${categoryKey}\`.`);
+    throw new Error(
+      `Catégorie inconnue : \`${categoryKey}\`.`
+    );
   }
 
-  const config = await getGuildConfig(client, guildId, context);
-  const disabledCategories = normalizeToggleRecord(config?.disabledCategories);
+  const config =
+    await getGuildConfig(
+      client,
+      guildId,
+      context
+    );
+
+  const disabledCategories =
+    normalizeToggleRecord(
+      config?.disabledCategories
+    );
+
   delete disabledCategories[normalizedKey];
 
-  await persistAccessConfig(client, guildId, { disabledCategories }, context);
-  return { categoryKey: normalizedKey, displayName: category.displayName, enabled: true };
+  await persistAccessConfig(
+    client,
+    guildId,
+    { disabledCategories },
+    context
+  );
+
+  return {
+    categoryKey: normalizedKey,
+    displayName: category.displayName,
+    enabled: true
+  };
 }
 
-export async function resetCategoryCommands(client, guildId, categoryKey, context = {}) {
-  const normalizedKey = normalizeCategoryKey(categoryKey);
-  const category = getCategoryRegistry(client, normalizedKey);
+export async function resetCategoryCommands(
+  client,
+  guildId,
+  categoryKey,
+  context = {}
+) {
+  const normalizedKey =
+    normalizeCategoryKey(categoryKey);
+
+  const category =
+    getCategoryRegistry(
+      client,
+      normalizedKey
+    );
 
   if (!category) {
-    throw new Error(`Unknown category: \`${categoryKey}\`.`);
+    throw new Error(
+      `Catégorie inconnue : \`${categoryKey}\`.`
+    );
   }
 
-  const config = await getGuildConfig(client, guildId, context);
-  const disabledCommands = normalizeToggleRecord(config?.disabledCommands);
+  const config =
+    await getGuildConfig(
+      client,
+      guildId,
+      context
+    );
+
+  const disabledCommands =
+    normalizeToggleRecord(
+      config?.disabledCommands
+    );
 
   for (const command of category.commands) {
-    delete disabledCommands[command.name.toLowerCase()];
+    delete disabledCommands[
+      command.name.toLowerCase()
+    ];
   }
 
-  await persistAccessConfig(client, guildId, { disabledCommands }, context);
-  return { categoryKey: normalizedKey, displayName: category.displayName };
+  await persistAccessConfig(
+    client,
+    guildId,
+    { disabledCommands },
+    context
+  );
+
+  return {
+    categoryKey: normalizedKey,
+    displayName: category.displayName
+  };
 }
 
-export function resolveCategoryChoice(client, input) {
+export function resolveCategoryChoice(
+  client,
+  input
+) {
   if (!input) {
     return null;
   }
 
-  const registry = buildCommandRegistry(client);
-  const normalizedInput = normalizeCategoryKey(input);
+  const registry =
+    buildCommandRegistry(client);
 
-  for (const [key, category] of registry.entries()) {
+  const normalizedInput =
+    normalizeCategoryKey(input);
+
+  for (
+    const [key, category]
+    of registry.entries()
+  ) {
     if (
       key === normalizedInput ||
-      normalizeCategoryKey(category.folder) === normalizedInput ||
-      normalizeCategoryKey(category.displayName) === normalizedInput
+      normalizeCategoryKey(
+        category.folder
+      ) === normalizedInput ||
+      normalizeCategoryKey(
+        category.displayName
+      ) === normalizedInput
     ) {
       return category;
     }
