@@ -3,13 +3,14 @@ import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/
 import { logger } from '../../utils/logger.js';
 import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName('time')
-        .setDescription('Get the current time in different timezones')
+        .setDescription('Obtenir l’heure actuelle dans différents fuseaux horaires')
         .addStringOption(option =>
             option.setName('timezone')
-                .setDescription('The timezone to display (e.g., UTC, America/New_York)')
+                .setDescription('Le fuseau horaire à afficher (ex. : UTC, America/New_York)')
                 .setRequired(false)),
 
     async execute(interaction) {
@@ -19,8 +20,9 @@ export default {
                 const timezone = interaction.options.getString('timezone') || 'UTC';
 
                 let timeString;
+
                 try {
-                    timeString = new Date().toLocaleString('en-US', {
+                    timeString = new Date().toLocaleString('fr-FR', {
                         timeZone: timezone,
                         weekday: 'long',
                         year: 'numeric',
@@ -32,11 +34,13 @@ export default {
                         timeZoneName: 'short'
                     });
                 } catch (error) {
-                    logger.warn(`Invalid timezone requested: ${timezone}`);
+                    logger.warn(`Fuseau horaire invalide demandé : ${timezone}`);
+
                     await replyUserError(interaction, {
                         type: ErrorTypes.VALIDATION,
-                        message: 'Invalid timezone. Please use a valid timezone identifier (e.g., UTC, America/New_York, Europe/London)',
+                        message: 'Fuseau horaire invalide. Veuillez utiliser un identifiant de fuseau horaire valide (ex. : UTC, America/New_York, Europe/London)',
                     });
+
                     return;
                 }
 
@@ -44,18 +48,22 @@ export default {
                 const unixTimestamp = Math.floor(now.getTime() / 1000);
 
                 const embed = successEmbed(
-                    '🕒 Current Time',
-                    `**${timezone}:** ${timeString}\n` +
-                    `**Unix Timestamp:** \`${unixTimestamp}\`\n` +
-                    `**ISO String:** \`${now.toISOString()}\``
+                    '🕒 Heure actuelle',
+                    `**${timezone} :** ${timeString}\n` +
+                    `**Horodatage Unix :** \`${unixTimestamp}\`\n` +
+                    `**Chaîne ISO :** \`${now.toISOString()}\``
                 );
 
-                await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+                await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [embed]
+                });
             },
-            'Failed to get current time. Please try again.',
+            'Impossible d’obtenir l’heure actuelle. Veuillez réessayer.',
             {
                 autoDefer: true,
-                deferOptions: { flags: MessageFlags.Ephemeral }
+                deferOptions: {
+                    flags: MessageFlags.Ephemeral
+                }
             }
         );
     },
