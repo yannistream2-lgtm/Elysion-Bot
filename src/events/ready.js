@@ -2,7 +2,11 @@ import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
-import { reconcileTicketPanels, reconcileVerificationPanels, reconcileReactionRolePanelHealth } from "../services/panelHealthService.js";
+import {
+  reconcileTicketPanels,
+  reconcileVerificationPanels,
+  reconcileReactionRolePanelHealth
+} from "../services/panelHealthService.js";
 import { reconcileLevelRoles } from "../services/leveling/levelRoleSyncService.js";
 import { initRiffyAfterReady } from "../services/music/riffySetup.js";
 
@@ -14,35 +18,46 @@ export default {
     try {
       client.user.setPresence(config.bot.presence);
 
-      startupLog(`Ready! Logged in as ${client.user.tag}`);
-      startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
-      startupLog(`Loaded ${client.commands.size} commands`);
+      startupLog(`Prêt ! Connecté en tant que ${client.user.tag}`);
+      startupLog(`Serveur(s) desservi(s) : ${client.guilds.cache.size}`);
+      startupLog(`Commandes chargées : ${client.commands.size}`);
 
       if (client.config?.features?.music) {
         initRiffyAfterReady(client);
       }
 
-      const reconciliationSummary = await reconcileReactionRoleMessages(client);
+      const reconciliationSummary =
+        await reconcileReactionRoleMessages(client);
+
       startupLog(
-        `Reaction role reconciliation: scanned ${reconciliationSummary.scannedMessages}, removed ${reconciliationSummary.removedMessages}, errors ${reconciliationSummary.errors}`
+        `Synchronisation des rôles par réaction : ${reconciliationSummary.scannedMessages} messages analysés, ${reconciliationSummary.removedMessages} supprimés, ${reconciliationSummary.errors} erreur(s)`
       );
 
-      const verificationPanelSummary = await reconcileVerificationPanels(client);
+      const verificationPanelSummary =
+        await reconcileVerificationPanels(client);
+
       startupLog(
-        `Verification panel health: scanned ${verificationPanelSummary.scannedGuilds} guilds, healthy ${verificationPanelSummary.healthyPanels}, deleted ${verificationPanelSummary.deletedPanels}, missing channel ${verificationPanelSummary.missingChannels}, recovered ${verificationPanelSummary.recoveredIds}, errors ${verificationPanelSummary.errors}`
+        `État des panneaux de vérification : ${verificationPanelSummary.scannedGuilds} serveur(s) analysé(s), ${verificationPanelSummary.healthyPanels} panneau(x) fonctionnel(s), ${verificationPanelSummary.deletedPanels} supprimé(s), ${verificationPanelSummary.missingChannels} salon(s) introuvable(s), ${verificationPanelSummary.recoveredIds} ID(s) récupéré(s), ${verificationPanelSummary.errors} erreur(s)`
       );
 
-      const reactionRolePanelSummary = await reconcileReactionRolePanelHealth(client);
+      const reactionRolePanelSummary =
+        await reconcileReactionRolePanelHealth(client);
+
       startupLog(
-        `Reaction role panel health: scanned ${reactionRolePanelSummary.scannedPanels} panels, healthy ${reactionRolePanelSummary.healthyPanels}, deleted ${reactionRolePanelSummary.deletedPanels}, missing channel ${reactionRolePanelSummary.missingChannels}, recovered ${reactionRolePanelSummary.recoveredIds}, errors ${reactionRolePanelSummary.errors}`
+        `État des panneaux de rôles par réaction : ${reactionRolePanelSummary.scannedPanels} panneau(x) analysé(s), ${reactionRolePanelSummary.healthyPanels} fonctionnel(s), ${reactionRolePanelSummary.deletedPanels} supprimé(s), ${reactionRolePanelSummary.missingChannels} salon(s) introuvable(s), ${reactionRolePanelSummary.recoveredIds} ID(s) récupéré(s), ${reactionRolePanelSummary.errors} erreur(s)`
       );
 
-      const levelRoleSummary = await reconcileLevelRoles(client);
+      const levelRoleSummary =
+        await reconcileLevelRoles(client);
+
       startupLog(
-        `Level role sync: scanned ${levelRoleSummary.scannedGuilds} guilds, pruned ${levelRoleSummary.prunedRewardEntries} stale rewards, re-awarded ${levelRoleSummary.rolesReAwarded} roles, errors ${levelRoleSummary.errors}`
+        `Synchronisation des rôles de niveau : ${levelRoleSummary.scannedGuilds} serveur(s) analysé(s), ${levelRoleSummary.prunedRewardEntries} récompense(s) obsolète(s) supprimée(s), ${levelRoleSummary.rolesReAwarded} rôle(s) réattribué(s), ${levelRoleSummary.errors} erreur(s)`
       );
     } catch (error) {
-      logger.error("Error in ready event:", error);
+      logger.error(
+        "Erreur lors de l'événement ready :",
+        error
+      );
     }
   },
 };
