@@ -13,6 +13,7 @@ import {
     getEconomyPrefix,
     getUserLevelPrefix,
 } from '../utils/database.js';
+
 const wipedataConfirmHandler = {
   name: 'wipedata_yes',
   async execute(interaction, client) {
@@ -64,7 +65,7 @@ const wipedataConfirmHandler = {
             deletedCount++;
           }
         } catch (error) {
-          logger.error(`Error deleting key ${key}:`, error);
+          logger.error(`Erreur lors de la suppression de la clé ${key} :`, error);
           deleteErrors.push(key);
         }
       }
@@ -90,7 +91,7 @@ const wipedataConfirmHandler = {
                 keys.forEach((key) => discoveredKeys.add(key));
               }
             } catch (listError) {
-              logger.debug(`Key listing failed for prefix ${prefix}:`, listError);
+              logger.debug(`La recherche des clés a échoué pour le préfixe ${prefix} :`, listError);
             }
           }
 
@@ -104,35 +105,43 @@ const wipedataConfirmHandler = {
               await client.db.delete(key);
               deletedCount++;
             } catch (error) {
-              logger.error(`Error deleting additional key ${key}:`, error);
+              logger.error(`Erreur lors de la suppression de la clé supplémentaire ${key} :`, error);
               deleteErrors.push(key);
             }
           }
         }
       } catch (error) {
-        logger.warn('Could not perform prefix search on database:', error);
+        logger.warn('Impossible d\'effectuer la recherche par préfixe dans la base de données :', error);
       }
 
       const successMessage =
-        `✅ **Your data has been successfully wiped!**\n\n` +
-        `**Records Deleted:** ${deletedCount}\n\n` +
-        `Your account has been reset to default values. You can now start fresh!\n\n` +
-        `*All your economy balance, levels, items, and personal data have been removed.*`;
+        `✅ **Vos données ont été supprimées avec succès !**\n\n` +
+        `**Enregistrements supprimés :** ${deletedCount}\n\n` +
+        `Votre compte a été réinitialisé aux valeurs par défaut. Vous pouvez maintenant repartir de zéro !\n\n` +
+        `*Votre solde économique, vos niveaux, vos objets et toutes vos données personnelles ont été supprimés.*`;
 
       await interaction.editReply({
-        embeds: [successEmbed('Data Wipe Complete', successMessage)],
+        embeds: [successEmbed('Suppression des données terminée', successMessage)],
         components: []
       });
 
-      logger.info(`User ${interaction.user.tag} (${userId}) wiped their data in guild ${guildId} - Deleted ${deletedCount} records`);
+      logger.info(
+        `L'utilisateur ${interaction.user.tag} (${userId}) a supprimé ses données sur le serveur ${guildId} - ${deletedCount} enregistrement(s) supprimé(s)`
+      );
+
       if (deleteErrors.length > 0) {
-        logger.warn(`Data wipe completed with ${deleteErrors.length} deletion errors for user ${userId} in guild ${guildId}`);
+        logger.warn(
+          `La suppression des données s'est terminée avec ${deleteErrors.length} erreur(s) de suppression pour l'utilisateur ${userId} sur le serveur ${guildId}`
+        );
       }
 
     } catch (error) {
-      logger.error('Wipedata confirm button handler error:', error);
+      logger.error('Erreur du gestionnaire du bouton de confirmation de suppression des données :', error);
       
-      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while wiping your data. Please try again later or contact support.' });
+      await replyUserError(interaction, {
+        type: ErrorTypes.UNKNOWN,
+        message: 'Une erreur est survenue lors de la suppression de vos données. Veuillez réessayer plus tard ou contacter le support.'
+      });
     }
   }
 };
@@ -144,20 +153,25 @@ const wipedataCancelHandler = {
       await interaction.update({
         embeds: [
           createEmbed({
-            title: '❌ Data Wipe Cancelled',
-            description: 'Your data has been preserved. Your account remains unchanged.',
+            title: '❌ Suppression des données annulée',
+            description: 'Vos données ont été conservées. Votre compte reste inchangé.',
             color: 'info'
           })
         ],
         components: []
       });
 
-      logger.info(`User ${interaction.user.tag} (${interaction.user.id}) cancelled data wipe in guild ${interaction.guildId}`);
+      logger.info(
+        `L'utilisateur ${interaction.user.tag} (${interaction.user.id}) a annulé la suppression de ses données sur le serveur ${interaction.guildId}`
+      );
     } catch (error) {
-      logger.error('Wipedata cancel button handler error:', error);
+      logger.error('Erreur du gestionnaire du bouton d\'annulation de suppression des données :', error);
       
       if (!interaction.replied && !interaction.deferred) {
-        await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Could not cancel data wipe.' });
+        await replyUserError(interaction, {
+          type: ErrorTypes.UNKNOWN,
+          message: 'Impossible d\'annuler la suppression des données.'
+        });
       }
     }
   }
