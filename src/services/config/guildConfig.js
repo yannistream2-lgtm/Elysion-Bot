@@ -104,4 +104,3 @@ function deepMergeGuildConfig(base, patch) {
 
     return result;
 }
-```
