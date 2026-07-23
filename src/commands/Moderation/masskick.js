@@ -6,56 +6,77 @@ import { ModerationService } from '../../services/moderation/moderationService.j
 import { TitanBotError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("masskick")
-        .setDescription("Kick multiple users from the server at once")
+        .setDescription("Expulser plusieurs utilisateurs du serveur en même temps")
         .addStringOption(option =>
             option
                 .setName("users")
-                .setDescription("User IDs or mentions to kick (separated by spaces or commas)")
+                .setDescription("IDs ou mentions des utilisateurs à expulser (séparés par des espaces ou des virgules)")
                 .setRequired(true)
         )
         .addStringOption(option =>
-            option.setName("reason")
-                .setDescription("Reason for the mass kick")
+            option
+                .setName("reason")
+                .setDescription("Raison de l'expulsion groupée")
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
+
     category: "moderation",
-    abuseProtection: { maxAttempts: 3, windowMs: 60_000 },
+
+    abuseProtection: {
+        maxAttempts: 3,
+        windowMs: 60_000
+    },
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
-            logger.warn(`Masskick interaction defer failed`, {
+            logger.warn(`Échec du defer de l'interaction Masskick`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 commandName: 'masskick'
             });
+
             return;
         }
 
         const usersInput = interaction.options.getString("users");
-        const reason = interaction.options.getString("reason") || "Mass kick - No reason provided";
+
+        const reason =
+            interaction.options.getString("reason") ||
+            "Expulsion groupée - Aucune raison fournie";
 
         try {
             const userIds = usersInput
-.replace(/<@!?(\d+)>/g, '$1')
-.split(/[\s,]+/)
-.filter(id => id && /^\d+$/.test(id))
-.slice(0, 20);
+                .replace(/<@!?(\d+)>/g, '$1')
+                .split(/[\s,]+/)
+                .filter(id => id && /^\d+$/.test(id))
+                .slice(0, 20);
 
             if (userIds.length === 0) {
-                return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Please provide valid user IDs or mentions. Maximum 20 users at once.' });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'Veuillez fournir des IDs ou mentions d’utilisateurs valides. Maximum **20 utilisateurs** à la fois.'
+                });
             }
 
             if (userIds.includes(interaction.user.id)) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You cannot include yourself in a mass kick.' });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.UNKNOWN,
+                    message: 'Vous ne pouvez pas vous inclure vous-même dans une expulsion groupée.'
+                });
             }
 
             if (userIds.includes(client.user.id)) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You cannot include the bot in a mass kick.' });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.UNKNOWN,
+                    message: 'Vous ne pouvez pas inclure le bot dans une expulsion groupée.'
+                });
             }
 
             const results = {
@@ -66,30 +87,56 @@ export default {
 
             for (const userId of userIds) {
                 try {
-                    const member = await interaction.guild.members.fetch(userId).catch(() => null);
-                    
+                    const member = await interaction.guild.members
+                        .fetch(userId)
+                        .catch(() => null);
+
                     if (!member) {
-                        results.failed.push({ userId, reason: "User not in server" });
+                        results.failed.push({
+                            userId,
+                            reason: "L'utilisateur n'est pas présent sur le serveur"
+                        });
+
                         continue;
                     }
 
-                    const modCheck = ModerationService.validateHierarchy(interaction.member, member, 'kick');
+                    const modCheck = ModerationService.validateHierarchy(
+                        interaction.member,
+                        member,
+                        'kick'
+                    );
+
                     if (!modCheck.valid) {
                         results.skipped.push({
                             user: member.user.tag,
                             userId,
-                            reason: ModerationService.buildHierarchySkipReason(interaction.member, member, 'kick'),
+                            reason: ModerationService.buildHierarchySkipReason(
+                                interaction.member,
+                                member,
+                                'kick'
+                            ),
                         });
+
                         continue;
                     }
 
-                    const botCheck = ModerationService.validateBotHierarchy(member, 'kick');
+                    const botCheck = ModerationService.validateBotHierarchy(
+                        member,
+                        'kick'
+                    );
+
                     if (!botCheck.valid) {
                         results.skipped.push({
                             user: member.user.tag,
                             userId,
-                            reason: ModerationService.buildHierarchySkipReason(interaction.member, member, 'kick', 'bot'),
+                            reason: ModerationService.buildHierarchySkipReason(
+                                interaction.member,
+                                member,
+                                'kick',
+                                'bot'
+                            ),
                         });
+
                         continue;
                     }
 
@@ -97,8 +144,9 @@ export default {
                         results.skipped.push({
                             user: member.user.tag,
                             userId,
-                            reason: 'Target has Admin or a managed role, or bot lacks Kick Members',
+                            reason: 'La cible possède le rôle Administrateur, un rôle géré, ou le bot ne possède pas la permission Expulser des membres'
                         });
+
                         continue;
                     }
 
@@ -113,10 +161,11 @@ export default {
                         client,
                         guild: interaction.guild,
                         event: {
-                            action: "Member Kicked",
+                            action: "Membre expulsé",
                             target: `${member.user.tag} (${member.user.id})`,
                             executor: `${interaction.user.tag} (${interaction.user.id})`,
-                            reason: `${reason} (Mass Kick)`,
+                            reason: `${reason} (Expulsion groupée)`,
+
                             metadata: {
                                 userId: member.user.id,
                                 moderatorId: interaction.user.id,
@@ -126,56 +175,82 @@ export default {
                     });
 
                 } catch (error) {
-                    logger.error(`Failed to kick user ${userId}:`, error);
-                    const reason = error instanceof TitanBotError
+                    logger.error(
+                        `Échec de l'expulsion de l'utilisateur ${userId}:`,
+                        error
+                    );
+
+                    const errorReason = error instanceof TitanBotError
                         ? (error.userMessage || error.message)
-                        : (error.message || "Unknown error");
-                    results.failed.push({ 
-                        userId, 
-                        reason,
+                        : (error.message || "Erreur inconnue");
+
+                    results.failed.push({
+                        userId,
+                        reason: errorReason,
                     });
                 }
             }
 
-            let description = `**Mass Kick Results:**\n\n`;
-            
+            let description = `**Résultats de l'expulsion groupée :**\n\n`;
+
             if (results.successful.length > 0) {
-                description += `✅ **Successfully Kicked (${results.successful.length}):**\n`;
+                description +=
+                    `✅ **Expulsions réussies (${results.successful.length}) :**\n`;
+
                 results.successful.forEach(result => {
-                    description += `• ${result.user} (${result.userId})\n`;
+                    description +=
+                        `• ${result.user} (${result.userId})\n`;
                 });
+
                 description += '\n';
             }
 
             if (results.skipped.length > 0) {
-                description += `⚠️ **Skipped (${results.skipped.length}):**\n`;
+                description +=
+                    `⚠️ **Utilisateurs ignorés (${results.skipped.length}) :**\n`;
+
                 results.skipped.forEach(result => {
-                    description += `• ${result.user} - ${result.reason}\n`;
+                    description +=
+                        `• ${result.user} - ${result.reason}\n`;
                 });
+
                 description += '\n';
             }
 
             if (results.failed.length > 0) {
-                description += `❌ **Failed (${results.failed.length}):**\n`;
+                description +=
+                    `❌ **Échecs (${results.failed.length}) :**\n`;
+
                 results.failed.forEach(result => {
-                    description += `• ${result.userId} - ${result.reason}\n`;
+                    description +=
+                        `• ${result.userId} - ${result.reason}\n`;
                 });
             }
 
-            const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
-            
+            const embed =
+                results.successful.length > 0
+                    ? successEmbed
+                    : warningEmbed;
+
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     embed(
-                        `👢 Mass Kick Completed`,
+                        `👢 Expulsion groupée terminée`,
                         description
                     )
                 ]
             });
 
         } catch (error) {
-            logger.error("Error in masskick command:", error);
-            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while processing the mass kick. Please try again later.' });
+            logger.error(
+                "Erreur lors de l'exécution de la commande masskick :",
+                error
+            );
+
+            return await replyUserError(interaction, {
+                type: ErrorTypes.UNKNOWN,
+                message: "Une erreur est survenue lors du traitement de l'expulsion groupée. Veuillez réessayer plus tard."
+            });
         }
     }
 };
