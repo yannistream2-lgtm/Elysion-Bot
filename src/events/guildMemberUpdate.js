@@ -16,12 +16,12 @@ export default {
           guildId: newMember.guild.id,
           eventType: EVENT_TYPES.MEMBER_NAME_CHANGE,
           data: {
-            title: 'Nickname changed',
+            title: 'Pseudonyme modifié',
             lines: [
-              `**User:** ${newMember.user.toString()} (${newMember.user.tag})`,
-              `**ID:** \`${newMember.user.id}\``,
-              `**Before:** ${oldMember.nickname || '*(no nickname)*'}`,
-              `**After:** ${newMember.nickname || '*(no nickname)*'}`,
+              `**Utilisateur :** ${newMember.user.toString()} (${newMember.user.tag})`,
+              `**ID :** \`${newMember.user.id}\``,
+              `**Avant :** ${oldMember.nickname || '*(aucun pseudonyme)*'}`,
+              `**Après :** ${newMember.nickname || '*(aucun pseudonyme)*'}`,
             ],
             thumbnail: newMember.user.displayAvatarURL({ dynamic: true }),
             userId: newMember.user.id,
@@ -32,7 +32,7 @@ export default {
       }
 
     } catch (error) {
-      logger.error('Error in guildMemberUpdate event:', error);
+      logger.error("Erreur lors de l'événement de mise à jour d'un membre :", error);
     }
   }
 };
