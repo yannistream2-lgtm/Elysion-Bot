@@ -17,32 +17,32 @@ const defaultAccountAgeDays = autoVerifyDefaults.defaultAccountAgeDays ?? 7;
 export default {
     data: new SlashCommandBuilder()
         .setName("autoverify")
-        .setDescription("Configure automatic verification settings")
+        .setDescription("Configurer les paramètres de vérification automatique")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
                 .setName("setup")
-                .setDescription("Set up automatic verification")
+                .setDescription("Configurer la vérification automatique")
                 .addRoleOption(option =>
                     option
                         .setName("role")
-                        .setDescription("Role to assign to users who meet auto-verify criteria")
+                        .setDescription("Rôle à attribuer aux utilisateurs répondant aux critères de vérification automatique")
                         .setRequired(true)
                 )
                 .addStringOption(option =>
                     option
                         .setName("criteria")
-                        .setDescription("Criteria for automatic verification")
+                        .setDescription("Critère pour la vérification automatique")
                         .addChoices(
-                            { name: "Account Age", value: "account_age" },
-                            { name: "No Criteria", value: "none" }
+                            { name: "Âge du compte", value: "account_age" },
+                            { name: "Aucun critère", value: "none" }
                         )
                         .setRequired(true)
                 )
                 .addIntegerOption(option =>
                     option
                         .setName("account_age_days")
-                        .setDescription("Minimum account age in days (required for account age criteria)")
+                        .setDescription("Âge minimum du compte en jours (requis pour le critère d'âge du compte)")
                         .setMinValue(minAccountAgeDays)
                         .setMaxValue(maxAccountAgeDays)
                         .setRequired(false)
@@ -51,7 +51,7 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("dashboard")
-                .setDescription("Open the auto-verification dashboard for customization")
+                .setDescription("Ouvrir le tableau de bord de vérification automatique pour le personnaliser")
         ),
 
     async execute(interaction, config, client) {
@@ -66,9 +66,9 @@ export default {
                     return await autoVerifyDashboard.execute(interaction, config, client);
                 default:
                     throw createError(
-                        `Unknown subcommand: ${subcommand}`,
+                        `Sous-commande inconnue : ${subcommand}`,
                         ErrorTypes.VALIDATION,
-                        "Invalid subcommand selected.",
+                        "Sous-commande invalide sélectionnée.",
                         { subcommand }
                     );
             }
@@ -93,9 +93,9 @@ async function handleSetup(interaction, guild, client) {
 
         if (verificationEnabled || hasAutoRoleConfigured) {
             throw createError(
-                'Auto-verify enable blocked by conflicting onboarding system',
+                'Activation de la vérification automatique bloquée par un système d’accueil incompatible',
                 ErrorTypes.CONFIGURATION,
-                'You cannot enable **AutoVerify** while the verification system or AutoRole is configured. Disable those first.',
+                'Vous ne pouvez pas activer **AutoVerify** tant que le système de vérification ou **AutoRole** est configuré. Désactivez d’abord ces systèmes.',
                 {
                     guildId: guild.id,
                     verificationEnabled,
@@ -107,38 +107,39 @@ async function handleSetup(interaction, guild, client) {
         }
 
         const botMember = guild.members.me;
+
         if (!botMember) {
             throw createError(
-                'Bot member not found in guild cache',
+                'Membre du bot introuvable dans le cache du serveur',
                 ErrorTypes.CONFIGURATION,
-                'I could not verify my permissions in this server. Please try again in a moment.',
+                'Je ne peux pas vérifier mes permissions sur ce serveur. Veuillez réessayer dans quelques instants.',
                 { guildId: guild.id }
             );
         }
 
         if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
             throw createError(
-                'Missing ManageRoles permission',
+                'Permission ManageRoles manquante',
                 ErrorTypes.PERMISSION,
-                "I need the 'Manage Roles' permission to assign auto-verify roles.",
+                "J’ai besoin de la permission **Gérer les rôles** pour attribuer les rôles de vérification automatique.",
                 { guildId: guild.id }
             );
         }
 
         if (targetRole.id === guild.id || targetRole.managed) {
             throw createError(
-                'Invalid auto-verify role selected',
+                'Rôle de vérification automatique invalide',
                 ErrorTypes.VALIDATION,
-                'Please choose a normal assignable role (not @everyone or an integration-managed role).',
+                'Veuillez choisir un rôle normal pouvant être attribué (pas @everyone ou un rôle géré par une intégration).',
                 { guildId: guild.id, roleId: targetRole.id, managed: targetRole.managed }
             );
         }
 
         if (targetRole.position >= botMember.roles.highest.position) {
             throw createError(
-                'Role hierarchy error for auto-verify setup',
+                'Erreur de hiérarchie des rôles pour la configuration de la vérification automatique',
                 ErrorTypes.PERMISSION,
-                'The selected auto-verify role must be below my highest role in the server role hierarchy.',
+                'Le rôle sélectionné pour la vérification automatique doit être placé en dessous de mon rôle le plus élevé dans la hiérarchie des rôles du serveur.',
                 { guildId: guild.id, roleId: targetRole.id, rolePosition: targetRole.position, botRolePosition: botMember.roles.highest.position }
             );
         }
@@ -160,16 +161,17 @@ async function handleSetup(interaction, guild, client) {
         await setGuildConfig(client, guild.id, guildConfig);
 
         let criteriaDescription = "";
+
         switch (criteria) {
             case "account_age":
-                criteriaDescription = `\`${accountAgeDays} days\` old`;
+                criteriaDescription = `\`${accountAgeDays} jours\` minimum`;
                 break;
             case "none":
-                criteriaDescription = "All users immediately";
+                criteriaDescription = "Tous les utilisateurs immédiatement";
                 break;
         }
 
-        logger.info('Auto-verify enabled', {
+        logger.info('Vérification automatique activée', {
             guildId: guild.id,
             criteria,
             accountAgeDays: criteria === 'account_age' ? accountAgeDays : null,
@@ -178,13 +180,12 @@ async function handleSetup(interaction, guild, client) {
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [successEmbed(
-                "Auto-Verification Configured",
-                `Automatic verification has been configured!\n\n**Role:** ${targetRole}\n**Criteria:** ${criteriaDescription}\n\nUsers who meet these criteria will receive this role when they join the server.`
+                "Vérification automatique configurée",
+                `La vérification automatique a été configurée !\n\n**Rôle :** ${targetRole}\n**Critère :** ${criteriaDescription}\n\nLes utilisateurs qui répondent à ces critères recevront ce rôle lorsqu’ils rejoindront le serveur.`
             )]
         });
 
     } catch (error) {
-        
         throw error;
     }
 }
