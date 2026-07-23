@@ -8,28 +8,29 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('randomuser')
-        .setDescription('Select a random user from the server')
+        .setDescription('Sélectionner un utilisateur aléatoire du serveur')
         .addRoleOption(option =>
             option.setName('role')
-                .setDescription('Limit selection to users with this role')
+                .setDescription('Limiter la sélection aux utilisateurs ayant ce rôle')
                 .setRequired(false))
         .addBooleanOption(option =>
             option.setName('bots')
-                .setDescription('Include bots in the selection (default: false)')
+                .setDescription('Inclure les bots dans la sélection (par défaut : faux)')
                 .setRequired(false))
         .addBooleanOption(option =>
             option.setName('online')
-                .setDescription('Only select from online users (default: false)')
+                .setDescription('Sélectionner uniquement les utilisateurs en ligne (par défaut : faux)')
                 .setRequired(false))
         .addBooleanOption(option =>
             option.setName('mention')
-                .setDescription('Mention the selected user (default: false)')
+                .setDescription('Mentionner l’utilisateur sélectionné (par défaut : faux)')
                 .setRequired(false)),
 
     async execute(interaction) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
-            logger.warn(`RandomUser interaction defer failed`, {
+            logger.warn(`Échec du report de l'interaction RandomUser`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 commandName: 'randomuser'
@@ -40,7 +41,7 @@ export default {
         if (!interaction.guild) {
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'This command can only be used in a server/guild.',
+                message: 'Cette commande peut uniquement être utilisée sur un serveur.',
             });
         }
 
@@ -66,14 +67,23 @@ export default {
         }
 
         if (memberArray.length === 0) {
-            let errorMessage = 'Could not find any users matching your filters:';
-            if (role) errorMessage = `No users have the **${role.name}** role.`;
-            if (onlineOnly) errorMessage = 'No users are currently online.';
-            if (role && onlineOnly) errorMessage = `No **${role.name}** members are online.`;
+            let errorMessage = 'Aucun utilisateur correspondant à vos filtres n’a été trouvé :';
+
+            if (role) {
+                errorMessage = `Aucun utilisateur ne possède le rôle **${role.name}**.`;
+            }
+
+            if (onlineOnly) {
+                errorMessage = 'Aucun utilisateur n’est actuellement en ligne.';
+            }
+
+            if (role && onlineOnly) {
+                errorMessage = `Aucun membre possédant le rôle **${role.name}** n’est actuellement en ligne.`;
+            }
 
             return replyUserError(interaction, {
                 type: ErrorTypes.USER_INPUT,
-                message: errorMessage + '\n\nTry adjusting your filters.',
+                message: errorMessage + '\n\nEssayez de modifier vos filtres.',
             });
         }
 
@@ -82,6 +92,7 @@ export default {
 
         const user = selectedMember.user;
         const joinDate = selectedMember.joinedAt;
+
         const roles = selectedMember.roles.cache
             .filter(role => role.id !== interaction.guild.id)
             .sort((a, b) => b.position - a.position)
@@ -89,14 +100,28 @@ export default {
             .slice(0, 10);
 
         const embed = successEmbed(
-            '🎲 Random User Selected',
+            '🎲 Utilisateur sélectionné aléatoirement',
             shouldMention ? `${selectedMember}` : `**${user.username}**`
         )
         .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
         .addFields(
-            { name: 'Username', value: user.username, inline: true },
-            { name: 'Bot', value: user.bot ? 'Yes' : 'No', inline: true },
-            { name: `Roles (${roles.length})`, value: roles.length > 0 ? roles.slice(0, 5).join('') + (roles.length > 5 ? `+${roles.length - 5} more` : '') : 'No roles', inline: false }
+            {
+                name: 'Nom d’utilisateur',
+                value: user.username,
+                inline: true
+            },
+            {
+                name: 'Bot',
+                value: user.bot ? 'Oui' : 'Non',
+                inline: true
+            },
+            {
+                name: `Rôles (${roles.length})`,
+                value: roles.length > 0
+                    ? roles.slice(0, 5).join('') + (roles.length > 5 ? `+${roles.length - 5} autres` : '')
+                    : 'Aucun rôle',
+                inline: false
+            }
         )
         .setColor('primary');
 
@@ -104,19 +129,27 @@ export default {
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId(`randomuser_${interaction.user.id}_again`)
-                    .setLabel('🎲 Pick Another User')
+                    .setLabel('🎲 Sélectionner un autre utilisateur')
                     .setStyle(ButtonStyle.Primary)
             );
 
         const response = await interaction.editReply({
-            content: shouldMention ? `${selectedMember}, you've been chosen!` : null,
+            content: shouldMention ? `${selectedMember}, vous avez été sélectionné !` : null,
             embeds: [embed],
             components: [row],
-            allowedMentions: { users: shouldMention ? [user.id] : [] }
+            allowedMentions: {
+                users: shouldMention ? [user.id] : []
+            }
         });
 
-        const filter = (i) => i.customId === `randomuser_${interaction.user.id}_again` && i.user.id === interaction.user.id;
-        const collector = response.createMessageComponentCollector({ filter, time: 300000 });
+        const filter = (i) =>
+            i.customId === `randomuser_${interaction.user.id}_again` &&
+            i.user.id === interaction.user.id;
+
+        const collector = response.createMessageComponentCollector({
+            filter,
+            time: 300000
+        });
 
         collector.on('collect', async (i) => {
             try {
@@ -139,7 +172,7 @@ export default {
                 if (newMemberArray.length === 0) {
                     await replyUserError(i, {
                         type: ErrorTypes.USER_INPUT,
-                        message: 'No users found matching the criteria.',
+                        message: 'Aucun utilisateur correspondant aux critères n’a été trouvé.',
                     });
                     return;
                 }
@@ -155,28 +188,62 @@ export default {
                     .slice(0, 10);
 
                 const newEmbed = successEmbed(
-                    '🎲 Random User Selected',
-                    shouldMention ? `${newSelectedMember}` : `**${newUser.username}**`
+                    '🎲 Utilisateur sélectionné aléatoirement',
+                    shouldMention
+                        ? `${newSelectedMember}`
+                        : `**${newUser.username}**`
                 )
-                .setThumbnail(newUser.displayAvatarURL({ dynamic: true, size: 256 }))
+                .setThumbnail(
+                    newUser.displayAvatarURL({
+                        dynamic: true,
+                        size: 256
+                    })
+                )
                 .addFields(
-                    { name: 'Username', value: newUser.username, inline: true },
-                    { name: 'Bot', value: newUser.bot ? 'Yes' : 'No', inline: true },
-                    { name: `Roles (${newRoles.length})`, value: newRoles.length > 0 ? newRoles.slice(0, 5).join('') + (newRoles.length > 5 ? `+${newRoles.length - 5} more` : '') : 'No roles', inline: false }
+                    {
+                        name: 'Nom d’utilisateur',
+                        value: newUser.username,
+                        inline: true
+                    },
+                    {
+                        name: 'Bot',
+                        value: newUser.bot ? 'Oui' : 'Non',
+                        inline: true
+                    },
+                    {
+                        name: `Rôles (${newRoles.length})`,
+                        value: newRoles.length > 0
+                            ? newRoles.slice(0, 5).join('') +
+                              (newRoles.length > 5
+                                  ? `+${newRoles.length - 5} autres`
+                                  : '')
+                            : 'Aucun rôle',
+                        inline: false
+                    }
                 )
-                .setColor(newSelectedMember.displayHexColor || '#3498db');
+                .setColor(
+                    newSelectedMember.displayHexColor || '#3498db'
+                );
 
                 await i.update({
-                    content: shouldMention ? `${newSelectedMember}, you've been chosen!` : null,
+                    content: shouldMention
+                        ? `${newSelectedMember}, vous avez été sélectionné !`
+                        : null,
                     embeds: [newEmbed],
                     components: [row],
-                    allowedMentions: { users: shouldMention ? [newUser.id] : [] }
+                    allowedMentions: {
+                        users: shouldMention ? [newUser.id] : []
+                    }
                 });
 
             } catch (error) {
-                logger.error('Button interaction error:', error);
+                logger.error(
+                    'Erreur lors de l’interaction avec le bouton :',
+                    error
+                );
+
                 await i.reply({
-                    content: 'An error occurred while selecting another user.',
+                    content: 'Une erreur est survenue lors de la sélection d’un autre utilisateur.',
                     flags: ['Ephemeral']
                 });
             }
@@ -184,10 +251,13 @@ export default {
 
         collector.on('end', () => {
             const disabledRow = ActionRowBuilder.from(row).setComponents(
-                ButtonBuilder.from(row.components[0]).setDisabled(true)
+                ButtonBuilder.from(row.components[0])
+                    .setDisabled(true)
             );
 
-            interaction.editReply({ components: [disabledRow] }).catch(console.error);
+            interaction.editReply({
+                components: [disabledRow]
+            }).catch(console.error);
         });
     },
 };
