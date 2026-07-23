@@ -1,3 +1,4 @@
+
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
@@ -14,11 +15,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("greroll")
-        .setDescription("Rerolls the winner(s) for an ended giveaway.")
+        .setDescription("Effectue un nouveau tirage pour les gagnants d'un giveaway terminé.")
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("The message ID of the ended giveaway.")
+                .setDescription("L'identifiant du message du giveaway terminé.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -26,31 +27,31 @@ export default {
     async execute(interaction) {
         if (!interaction.inGuild()) {
             throw new TitanBotError(
-                'Giveaway command used outside guild',
+                'Commande giveaway utilisée en dehors d\'un serveur',
                 ErrorTypes.VALIDATION,
-                'This command can only be used in a server.',
+                'Cette commande peut uniquement être utilisée dans un serveur.',
                 { userId: interaction.user.id }
             );
         }
 
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
             throw new TitanBotError(
-                'User lacks ManageGuild permission',
+                'L\'utilisateur ne possède pas la permission ManageGuild',
                 ErrorTypes.PERMISSION,
-                "You need the 'Manage Server' permission to reroll a giveaway.",
+                "Vous avez besoin de la permission « Gérer le serveur » pour effectuer un nouveau tirage.",
                 { userId: interaction.user.id, guildId: interaction.guildId }
             );
         }
 
-        logger.info(`Giveaway reroll initiated by ${interaction.user.tag} in guild ${interaction.guildId}`);
+        logger.info(`Nouveau tirage du giveaway lancé par ${interaction.user.tag} sur le serveur ${interaction.guildId}`);
 
         const messageId = interaction.options.getString("messageid");
 
         if (!messageId || !/^\d+$/.test(messageId)) {
             throw new TitanBotError(
-                'Invalid message ID format',
+                'Format d\'identifiant de message invalide',
                 ErrorTypes.VALIDATION,
-                'Please provide a valid message ID.',
+                'Veuillez fournir un identifiant de message valide.',
                 { providedId: messageId }
             );
         }
@@ -64,18 +65,18 @@ export default {
 
         if (!giveaway) {
             throw new TitanBotError(
-                `Giveaway not found: ${messageId}`,
+                `Giveaway introuvable : ${messageId}`,
                 ErrorTypes.VALIDATION,
-                "No giveaway was found with that message ID in the database.",
+                "Aucun giveaway n'a été trouvé avec cet identifiant de message dans la base de données.",
                 { messageId, guildId: interaction.guildId }
             );
         }
 
         if (!giveaway.isEnded && !giveaway.ended) {
             throw new TitanBotError(
-                `Giveaway still active: ${messageId}`,
+                `Giveaway toujours actif : ${messageId}`,
                 ErrorTypes.VALIDATION,
-                "This giveaway is still active. Please use `/gend` to end it first.",
+                "Ce giveaway est toujours actif. Utilisez `/gend` pour le terminer d'abord.",
                 { messageId, status: 'active' }
             );
         }
@@ -84,9 +85,9 @@ export default {
 
         if (participants.length < giveaway.winnerCount) {
             throw new TitanBotError(
-                `Insufficient participants for reroll: ${participants.length} < ${giveaway.winnerCount}`,
+                `Nombre de participants insuffisant pour le nouveau tirage : ${participants.length} < ${giveaway.winnerCount}`,
                 ErrorTypes.VALIDATION,
-                "Not enough entries to pick the required number of winners.",
+                "Il n'y a pas assez de participations pour sélectionner le nombre de gagnants requis.",
                 { participantsCount: participants.length, winnersNeeded: giveaway.winnerCount }
             );
         }
@@ -106,7 +107,7 @@ export default {
         const channel = await interaction.client.channels.fetch(
             giveaway.channelId,
         ).catch(err => {
-            logger.warn(`Could not fetch channel ${giveaway.channelId}:`, err.message);
+            logger.warn(`Impossible de récupérer le salon ${giveaway.channelId} :`, err.message);
             return null;
         });
 
@@ -118,13 +119,13 @@ export default {
                 updatedGiveaway,
             );
 
-            logger.warn(`Could not find channel for giveaway ${messageId}, but saved new winners to database`);
+            logger.warn(`Impossible de trouver le salon du giveaway ${messageId}, mais les nouveaux gagnants ont été enregistrés dans la base de données`);
 
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Reroll Complete",
-                        "The new winners have been selected and saved to the database. Could not find channel to announce.",
+                        "Nouveau tirage terminé",
+                        "Les nouveaux gagnants ont été sélectionnés et enregistrés dans la base de données. Impossible de trouver le salon pour les annoncer.",
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,
@@ -134,7 +135,7 @@ export default {
         const message = await channel.messages
             .fetch(messageId)
             .catch(err => {
-                logger.warn(`Could not fetch message ${messageId}:`, err.message);
+                logger.warn(`Impossible de récupérer le message ${messageId} :`, err.message);
                 return null;
             });
 
@@ -153,18 +154,19 @@ export default {
             const existingPingMsg = giveaway.winnerPingMessageId
                 ? await channel.messages.fetch(giveaway.winnerPingMessageId).catch(() => null)
                 : null;
+
             if (existingPingMsg) {
                 await existingPingMsg.edit({
-                    content: `🔄 **GIVEAWAY REROLL** 🔄 New winners for **${giveaway.prize}**: ${winnerMentions}!`,
+                    content: `🔄 **NOUVEAU TIRAGE DU GIVEAWAY** 🔄 Les nouveaux gagnants de **${giveaway.prize}** sont : ${winnerMentions} !`,
                 });
             } else {
                 const newPingMsg = await channel.send({
-                    content: `🔄 **GIVEAWAY REROLL** 🔄 New winners for **${giveaway.prize}**: ${winnerMentions}!`,
+                    content: `🔄 **NOUVEAU TIRAGE DU GIVEAWAY** 🔄 Les nouveaux gagnants de **${giveaway.prize}** sont : ${winnerMentions} !`,
                 });
                 updatedGiveaway.winnerPingMessageId = newPingMsg.id;
             }
 
-            logger.info(`Giveaway rerolled (message not found, but announced): ${messageId}`);
+            logger.info(`Nouveau tirage effectué (message introuvable, mais gagnants annoncés) : ${messageId}`);
 
             try {
                 await logEvent({
@@ -172,22 +174,22 @@ export default {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.GIVEAWAY_REROLL,
                     data: {
-                        description: `Giveaway rerolled: ${giveaway.prize}`,
+                        description: `Nouveau tirage du giveaway : ${giveaway.prize}`,
                         channelId: giveaway.channelId,
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: 'Prize',
-                                value: giveaway.prize || 'Mystery Prize!',
+                                name: 'Lot',
+                                value: giveaway.prize || 'Lot mystère !',
                                 inline: true
                             },
                             {
-                                name: 'New Winners',
+                                name: 'Nouveaux gagnants',
                                 value: winnerMentions,
                                 inline: false
                             },
                             {
-                                name: 'Total Entries',
+                                name: 'Nombre total de participations',
                                 value: participants.length.toString(),
                                 inline: true
                             }
@@ -195,14 +197,14 @@ export default {
                     }
                 });
             } catch (logError) {
-                logger.debug('Error logging giveaway reroll:', logError);
+                logger.debug('Erreur lors de l\'enregistrement du nouveau tirage du giveaway :', logError);
             }
 
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Reroll Complete",
-                        `The new winners have been announced in ${channel}. (Original message not found).`,
+                        "Nouveau tirage terminé",
+                        `Les nouveaux gagnants ont été annoncés dans ${channel}. (Le message original est introuvable).`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,
@@ -219,7 +221,7 @@ export default {
         const newRow = createGiveawayButtons(true);
 
         await message.edit({
-            content: "🔄 **GIVEAWAY REROLLED** 🔄",
+            content: "🔄 **NOUVEAU TIRAGE DU GIVEAWAY** 🔄",
             embeds: [newEmbed],
             components: [newRow],
         });
@@ -231,18 +233,19 @@ export default {
         const existingPingMsg = giveaway.winnerPingMessageId
             ? await channel.messages.fetch(giveaway.winnerPingMessageId).catch(() => null)
             : null;
+
         if (existingPingMsg) {
             await existingPingMsg.edit({
-                content: `🔄 **REROLL WINNERS** 🔄 CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
+                content: `🔄 **NOUVEAUX GAGNANTS** 🔄 FÉLICITATIONS ${winnerMentions} ! Vous êtes le(s) nouveau(x) gagnant(s) du giveaway **${giveaway.prize}** ! Contactez l'organisateur <@${giveaway.hostId}> pour récupérer votre lot.`,
             });
         } else {
             const newPingMsg = await channel.send({
-                content: `🔄 **REROLL WINNERS** 🔄 CONGRATULATIONS ${winnerMentions}! You are the new winner(s) for the **${giveaway.prize}** giveaway! Please contact the host <@${giveaway.hostId}> to claim your prize.`,
+                content: `🔄 **NOUVEAUX GAGNANTS** 🔄 FÉLICITATIONS ${winnerMentions} ! Vous êtes le(s) nouveau(x) gagnant(s) du giveaway **${giveaway.prize}** ! Contactez l'organisateur <@${giveaway.hostId}> pour récupérer votre lot.`,
             });
             updatedGiveaway.winnerPingMessageId = newPingMsg.id;
         }
 
-        logger.info(`Giveaway successfully rerolled: ${messageId} with ${newWinners.length} new winners`);
+        logger.info(`Giveaway relancé avec succès : ${messageId}, ${newWinners.length} nouveau(x) gagnant(s)`);
 
         try {
             await logEvent({
@@ -250,22 +253,22 @@ export default {
                 guildId: interaction.guildId,
                 eventType: EVENT_TYPES.GIVEAWAY_REROLL,
                 data: {
-                    description: `Giveaway rerolled: ${giveaway.prize}`,
+                    description: `Nouveau tirage du giveaway : ${giveaway.prize}`,
                     channelId: giveaway.channelId,
                     userId: interaction.user.id,
                     fields: [
                         {
-                            name: 'Prize',
-                            value: giveaway.prize || 'Mystery Prize!',
+                            name: 'Lot',
+                            value: giveaway.prize || 'Lot mystère !',
                             inline: true
                         },
                         {
-                            name: 'New Winners',
+                            name: 'Nouveaux gagnants',
                             value: winnerMentions,
                             inline: false
                         },
                         {
-                            name: 'Total Entries',
+                            name: 'Nombre total de participations',
                             value: participants.length.toString(),
                             inline: true
                         }
@@ -273,17 +276,18 @@ export default {
                 }
             });
         } catch (logError) {
-            logger.debug('Error logging giveaway reroll event:', logError);
+            logger.debug('Erreur lors de l\'enregistrement de l\'événement de nouveau tirage :', logError);
         }
 
         return InteractionHelper.safeReply(interaction, {
             embeds: [
                 successEmbed(
-                    "Reroll Successful ✅",
-                    `Successfully rerolled the giveaway for **${giveaway.prize}** in ${channel}. Selected ${newWinners.length} new winner(s).`,
+                    "Nouveau tirage réussi ✅",
+                    `Le giveaway pour **${giveaway.prize}** dans ${channel} a été relancé avec succès. ${newWinners.length} nouveau(x) gagnant(s) ont été sélectionné(s).`,
                 ),
             ],
             flags: MessageFlags.Ephemeral,
         });
     },
 };
+```
