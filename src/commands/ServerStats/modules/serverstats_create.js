@@ -1,4 +1,4 @@
-```js
+
 import { PermissionFlagsBits, ChannelType } from 'discord.js';
 import { createEmbed, successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterTypeLabel } from '../../../services/serverstatsService.js';
