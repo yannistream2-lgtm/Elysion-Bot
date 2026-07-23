@@ -4,26 +4,32 @@ import { getConfirmationButtons } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     slashOnly: true,
+
     data: new SlashCommandBuilder()
         .setName('wipedata')
-        .setDescription('Delete all your personal data from the bot (irreversible)'),
+        .setDescription('Supprimer toutes vos données personnelles du bot (irréversible)'),
 
     async execute(interaction, guildConfig, client) {
-        const warningMessage = 
-            `⚠️ **THIS ACTION IS IRREVERSIBLE!** ⚠️\n\n` +
-            `This will permanently delete **ALL** your data from this server including:\n` +
-            `• 💰 Economy balance (wallet & bank)\n` +
-            `• 📊 Levels and XP\n` +
-            `• 🎒 Inventory items\n` +
-            `• 🛍️ Shop purchases\n` +
-            `• 🎂 Birthday information\n` +
-            `• 🔢 Counter data\n` +
-            `• 📋 All other personal data\n\n` +
-            `**This cannot be undone. Are you absolutely sure?**`;
 
-        const embed = warningEmbed('Wipe All Data', warningMessage);
+        const warningMessage =
+            `⚠️ **CETTE ACTION EST IRRÉVERSIBLE !** ⚠️\n\n` +
+            `Cette action supprimera définitivement **TOUTES** vos données de ce serveur, notamment :\n` +
+            `• 💰 Solde économique (portefeuille et banque)\n` +
+            `• 📊 Niveaux et XP\n` +
+            `• 🎒 Objets de l'inventaire\n` +
+            `• 🛍️ Achats effectués dans la boutique\n` +
+            `• 🎂 Informations d'anniversaire\n` +
+            `• 🔢 Données des compteurs\n` +
+            `• 📋 Toutes les autres données personnelles\n\n` +
+            `**Cette action est définitive et ne peut pas être annulée. Êtes-vous absolument sûr ?**`;
+
+        const embed = warningEmbed(
+            'Supprimer toutes les données',
+            warningMessage
+        );
 
         const confirmButtons = getConfirmationButtons('wipedata');
 
@@ -33,7 +39,7 @@ export default {
             flags: MessageFlags.Ephemeral
         });
 
-        logger.info(`Wipedata command executed - confirmation prompt shown`, {
+        logger.info(`Commande Wipedata exécutée - demande de confirmation affichée`, {
             userId: interaction.user.id,
             guildId: interaction.guildId
         });
