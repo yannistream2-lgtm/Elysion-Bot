@@ -14,7 +14,7 @@ const BACK_BUTTON_ID = "help-back-to-main";
 const ALL_COMMANDS_ID = "help-all-commands";
 const PAGINATION_PREFIX = "help-page";
 const CATEGORY_SELECT_ID = "help-category-select";
-const FOOTER_TEXT = "Made with ❤️";
+const FOOTER_TEXT = "Fait avec ❤️";
 const SUBCOMMAND_TYPE = 1;
 const SUBCOMMAND_GROUP_TYPE = 2;
 
@@ -54,7 +54,7 @@ function buildHelpEntries(command, category) {
     }
 
     const baseName = commandData.name;
-    const baseDescription = commandData.description || "No description";
+    const baseDescription = commandData.description || "Aucune description";
     const options = commandData.options || [];
 
     const entries = [];
@@ -150,7 +150,7 @@ async function createCategoryCommandsMenu(category, client) {
         }
     } catch (error) {
         logger.error(
-            `Error reading commands from category ${category}:`,
+            `Erreur lors de la lecture des commandes de la catégorie ${category} :`,
             error,
         );
     }
@@ -166,14 +166,14 @@ async function createCategoryCommandsMenu(category, client) {
             }
         }
     } catch (error) {
-        logger.error('Error fetching registered commands:', error);
+        logger.error('Erreur lors de la récupération des commandes enregistrées :', error);
     }
 
     const embed = createEmbed({
-        title: `${icon} ${categoryName} Commands`,
+        title: `${icon} Commandes ${categoryName}`,
         description: categoryCommands.length > 0
-            ? `Click any command mention below to use it.`
-            : `No commands found in the **${categoryName}** category.`
+            ? `Cliquez sur une commande ci-dessous pour l'utiliser.`
+            : `Aucune commande trouvée dans la catégorie **${categoryName}**.`
     });
 
     if (categoryCommands.length > 0) {
@@ -190,7 +190,7 @@ async function createCategoryCommandsMenu(category, client) {
         const maxLength = 1000;
         if (commandMentions.length <= maxLength) {
             embed.addFields({
-                name: "Commands",
+                name: "Commandes",
                 value: commandMentions,
                 inline: false,
             });
@@ -207,11 +207,12 @@ async function createCategoryCommandsMenu(category, client) {
                     currentChunk += (currentChunk ? "\n" : "") + line;
                 }
             }
+
             if (currentChunk) chunks.push(currentChunk);
 
             chunks.forEach((chunk, index) => {
                 embed.addFields({
-                    name: `Commands (Part ${index + 1})`,
+                    name: `Commandes (Partie ${index + 1})`,
                     value: chunk,
                     inline: false,
                 });
@@ -224,7 +225,7 @@ async function createCategoryCommandsMenu(category, client) {
 
     const backButton = createButton(
         BACK_BUTTON_ID,
-        "Back",
+        "Retour",
         "primary",
         "⬅️",
         false,
@@ -257,6 +258,7 @@ export async function createAllCommandsMenu(page = 1, client) {
                 "../../commands",
                 category,
             );
+
             const commandFiles = (await fs.readdir(categoryPath))
                 .filter((file) => file.endsWith(".js"))
                 .sort();
@@ -281,7 +283,7 @@ export async function createAllCommandsMenu(page = 1, client) {
             }
         } catch (error) {
             logger.error(
-                `Error reading commands from category ${category}:`,
+                `Erreur lors de la lecture des commandes de la catégorie ${category} :`,
                 error,
             );
         }
@@ -290,15 +292,17 @@ export async function createAllCommandsMenu(page = 1, client) {
     allCommands.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     let registeredCommands = new Collection();
+
     try {
         if (client?.application?.commands?.fetch) {
             const commands = await client.application.commands.fetch();
+
             for (const cmd of commands.values()) {
                 registeredCommands.set(cmd.name, cmd);
             }
         }
     } catch (error) {
-        logger.error('Error fetching registered commands:', error);
+        logger.error('Erreur lors de la récupération des commandes enregistrées :', error);
     }
 
     const totalPages = Math.ceil(allCommands.length / commandsPerPage);
@@ -307,8 +311,8 @@ export async function createAllCommandsMenu(page = 1, client) {
     const pageCommands = allCommands.slice(startIndex, endIndex);
 
     const embed = createEmbed({
-        title: "📋 All Commands",
-        description: `Browse every available command in one list. Use the page buttons below to move through the full set.`
+        title: "📋 Toutes les commandes",
+        description: `Parcourez toutes les commandes disponibles dans une seule liste. Utilisez les boutons de navigation ci-dessous pour parcourir la liste complète.`
     });
 
     embed.setFooter({ text: FOOTER_TEXT });
@@ -317,13 +321,18 @@ export async function createAllCommandsMenu(page = 1, client) {
     if (pageCommands.length > 0) {
         const commandMentions = pageCommands.map((cmd) => {
             const registeredCmd = registeredCommands.get(cmd.baseName);
+
             if (registeredCmd && registeredCmd.id) {
                 return `</${cmd.displayName}:${registeredCmd.id}> · ${cmd.category}`;
             }
+
             return `\`/${cmd.displayName}\` · ${cmd.category}`;
         });
 
-        const columnCount = pageCommands.length > 20 ? 3 : (pageCommands.length > 10 ? 2 : 1);
+        const columnCount = pageCommands.length > 20
+            ? 3
+            : (pageCommands.length > 10 ? 2 : 1);
+
         const chunkSize = Math.ceil(commandMentions.length / columnCount);
 
         for (let i = 0; i < columnCount; i++) {
@@ -334,7 +343,9 @@ export async function createAllCommandsMenu(page = 1, client) {
             if (!chunk) continue;
 
             embed.addFields({
-                name: i === 0 ? `Commands (Page ${page})` : "Commands (cont.)",
+                name: i === 0
+                    ? `Commandes (Page ${page})`
+                    : "Commandes (suite)",
                 value: chunk,
                 inline: columnCount > 1,
             });
@@ -349,12 +360,13 @@ export async function createAllCommandsMenu(page = 1, client) {
             page,
             totalPages,
         );
+
         components.push(paginationRow);
     }
 
     const backButton = createButton(
         BACK_BUTTON_ID,
-        "Back",
+        "Retour",
         "primary",
         "⬅️",
         false,
@@ -373,6 +385,7 @@ export async function createAllCommandsMenu(page = 1, client) {
 
 export const helpCategorySelectMenu = {
     name: CATEGORY_SELECT_ID,
+
     async execute(interaction, client) {
         try {
             if (!interaction.deferred && !interaction.replied) {
@@ -383,12 +396,17 @@ export const helpCategorySelectMenu = {
 
             if (selectedCategory === ALL_COMMANDS_ID) {
                 const { embeds, components } = await createAllCommandsMenu(1, client);
+
                 await interaction.editReply({
                     embeds,
                     components,
                 });
             } else {
-                const { embeds, components } = await createCategoryCommandsMenu(selectedCategory, client);
+                const { embeds, components } = await createCategoryCommandsMenu(
+                    selectedCategory,
+                    client
+                );
+
                 await interaction.editReply({
                     embeds,
                     components,
@@ -396,12 +414,16 @@ export const helpCategorySelectMenu = {
             }
         } catch (error) {
             if (error?.code === 40060 || error?.code === 10062) {
-                logger.warn('Help category select interaction already acknowledged or expired.', {
-                    event: 'interaction.help.select.unavailable',
-                    errorCode: String(error.code),
-                    customId: interaction.customId,
-                    interactionId: interaction.id,
-                });
+                logger.warn(
+                    'L’interaction du menu de sélection de catégorie est déjà traitée ou expirée.',
+                    {
+                        event: 'interaction.help.select.unavailable',
+                        errorCode: String(error.code),
+                        customId: interaction.customId,
+                        interactionId: interaction.id,
+                    }
+                );
+
                 return;
             }
 
