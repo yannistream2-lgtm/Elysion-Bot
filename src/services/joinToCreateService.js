@@ -16,6 +16,7 @@ import { ChannelType, PermissionFlagsBits } from 'discord.js';
 const CHANNEL_NAME_MAX_LENGTH = 100;
 const CHANNEL_VARIABLE_MAX_LENGTH = 32;
 const CONTROL_AND_INVISIBLE_CHARS_REGEX = /[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/g;
+
 const ALLOWED_TEMPLATE_PLACEHOLDERS = new Set([
     '{username}',
     '{user_tag}',
@@ -30,37 +31,41 @@ const ALLOWED_TEMPLATE_PLACEHOLDERS = new Set([
 export function validateChannelNameTemplate(template) {
     if (!template || typeof template !== 'string') {
         throw new TitanBotError(
-            'Invalid channel template: must be a non-empty string',
+            'Modèle de nom de salon invalide : le texte ne peut pas être vide',
             ErrorTypes.VALIDATION,
-            'Channel name template must be valid text.'
+            'Le modèle du nom du salon doit être un texte valide.'
         );
     }
 
-    const normalizedTemplate = template.normalize('NFKC').replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '').trim();
+    const normalizedTemplate = template
+        .normalize('NFKC')
+        .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
+        .trim();
 
     if (normalizedTemplate.length > CHANNEL_NAME_MAX_LENGTH) {
         throw new TitanBotError(
-            'Channel template exceeds maximum length',
+            'Le modèle du nom du salon dépasse la longueur maximale',
             ErrorTypes.VALIDATION,
-            `Channel name template cannot exceed ${CHANNEL_NAME_MAX_LENGTH} characters.`
+            `Le modèle du nom du salon ne peut pas dépasser ${CHANNEL_NAME_MAX_LENGTH} caractères.`
         );
     }
 
     if (/[@#:`]/.test(normalizedTemplate)) {
         throw new TitanBotError(
-            'Channel template contains forbidden characters',
+            'Le modèle du salon contient des caractères interdits',
             ErrorTypes.VALIDATION,
-            'Channel template cannot contain @, #, :, or backtick characters.'
+            'Le modèle du salon ne peut pas contenir les caractères @, #, : ou `.'
         );
     }
 
     const placeholders = normalizedTemplate.match(/\{[^}]+\}/g) || [];
+
     for (const placeholder of placeholders) {
         if (!ALLOWED_TEMPLATE_PLACEHOLDERS.has(placeholder)) {
             throw new TitanBotError(
-                'Channel template contains unknown placeholders',
+                'Le modèle du salon contient des paramètres inconnus',
                 ErrorTypes.VALIDATION,
-                `Unknown placeholder: ${placeholder}. Allowed placeholders are ${Array.from(ALLOWED_TEMPLATE_PLACEHOLDERS).join(', ')}`
+                `Paramètre inconnu : ${placeholder}. Les paramètres autorisés sont : ${Array.from(ALLOWED_TEMPLATE_PLACEHOLDERS).join(', ')}`
             );
         }
     }
@@ -73,17 +78,17 @@ export function validateBitrate(bitrate) {
 
     if (isNaN(bitrateNum)) {
         throw new TitanBotError(
-            'Bitrate must be a valid number',
+            'Le débit doit être un nombre valide',
             ErrorTypes.VALIDATION,
-            'Please enter a valid number for bitrate.'
+            'Veuillez entrer un nombre valide pour le débit.'
         );
     }
 
     if (bitrateNum < 8 || bitrateNum > 384) {
         throw new TitanBotError(
-            'Bitrate out of valid range',
+            'Le débit est en dehors de la plage autorisée',
             ErrorTypes.VALIDATION,
-            'Bitrate must be between 8 and 384 kbps.'
+            'Le débit doit être compris entre 8 et 384 kbps.'
         );
     }
 
@@ -95,17 +100,17 @@ export function validateUserLimit(limit) {
 
     if (isNaN(limitNum)) {
         throw new TitanBotError(
-            'User limit must be a valid number',
+            'La limite d’utilisateurs doit être un nombre valide',
             ErrorTypes.VALIDATION,
-            'Please enter a valid number for user limit.'
+            'Veuillez entrer un nombre valide pour la limite d’utilisateurs.'
         );
     }
 
     if (limitNum < 0 || limitNum > 99) {
         throw new TitanBotError(
-            'User limit out of valid range',
+            'La limite d’utilisateurs est en dehors de la plage autorisée',
             ErrorTypes.VALIDATION,
-            'User limit must be between 0 (no limit) and 99.'
+            'La limite d’utilisateurs doit être comprise entre 0 (aucune limite) et 99.'
         );
     }
 
@@ -114,65 +119,76 @@ export function validateUserLimit(limit) {
 
 export function formatChannelName(template, variables) {
     try {
-        const safeTemplate = template.normalize('NFKC').replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '').trim();
+        const safeTemplate = template
+            .normalize('NFKC')
+            .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
+            .trim();
+
         validateChannelNameTemplate(safeTemplate);
 
         if (!variables || typeof variables !== 'object') {
             throw new TitanBotError(
-                'Invalid variables object for channel formatting',
+                'Objet de variables invalide pour le formatage du salon',
                 ErrorTypes.VALIDATION
             );
         }
 
         const sanitized = {};
+
         for (const [key, value] of Object.entries(variables)) {
             if (value === null || value === undefined) {
-                sanitized[key] = 'Unknown';
+                sanitized[key] = 'Inconnu';
             } else {
-                
                 sanitized[key] = String(value)
                     .normalize('NFKC')
                     .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
-                    .replace(/[@#:`\n\r\t]/g, '') 
+                    .replace(/[@#:`\n\r\t]/g, '')
                     .trim()
                     .substring(0, CHANNEL_VARIABLE_MAX_LENGTH);
             }
         }
 
         const replacements = {
-            '{username}': sanitized.username || 'User',
-            '{user_tag}': sanitized.userTag || 'User#0000',
-            '{displayName}': sanitized.displayName || 'User',
-            '{display_name}': sanitized.displayName || 'User',
-            '{guildName}': sanitized.guildName || 'Server',
-            '{guild_name}': sanitized.guildName || 'Server',
-            '{channelName}': sanitized.channelName || 'Voice Channel',
-            '{channel_name}': sanitized.channelName || 'Voice Channel',
+            '{username}': sanitized.username || 'Utilisateur',
+            '{user_tag}': sanitized.userTag || 'Utilisateur#0000',
+            '{displayName}': sanitized.displayName || 'Utilisateur',
+            '{display_name}': sanitized.displayName || 'Utilisateur',
+            '{guildName}': sanitized.guildName || 'Serveur',
+            '{guild_name}': sanitized.guildName || 'Serveur',
+            '{channelName}': sanitized.channelName || 'Salon vocal',
+            '{channel_name}': sanitized.channelName || 'Salon vocal',
         };
 
         let formatted = safeTemplate;
+
         for (const [placeholder, value] of Object.entries(replacements)) {
-            formatted = formatted.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+            formatted = formatted.replace(
+                new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'),
+                value
+            );
         }
 
         formatted = formatted
             .normalize('NFKC')
             .replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '')
-            .replace(/[@#:`\n\r\t]/g, '') 
+            .replace(/[@#:`\n\r\t]/g, '')
             .replace(/\s+/g, ' ')
             .trim();
 
         if (formatted.length === 0) {
-            formatted = 'Voice Channel';
+            formatted = 'Salon vocal';
         } else if (formatted.length > CHANNEL_NAME_MAX_LENGTH) {
             formatted = formatted.substring(0, CHANNEL_NAME_MAX_LENGTH);
         }
 
-        logger.debug(`Formatted channel name: "${formatted}" from template "${template}"`);
+        logger.debug(
+            `Nom du salon formaté : "${formatted}" à partir du modèle "${template}"`
+        );
+
         return formatted;
 
     } catch (error) {
-        logger.error('Error formatting channel name:', error);
+        logger.error('Erreur lors du formatage du nom du salon :', error);
         throw error;
     }
 }
@@ -181,26 +197,28 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
     try {
         if (!client || !client.db) {
             throw new TitanBotError(
-                'Database service not available',
+                'Service de base de données indisponible',
                 ErrorTypes.DATABASE,
-                'System error occurred. Please try again.'
+                'Une erreur système est survenue. Veuillez réessayer plus tard.'
             );
         }
 
         if (!guildId || !channelId) {
             throw new TitanBotError(
-                'Missing required guild or channel ID',
+                'Identifiant du serveur ou du salon manquant',
                 ErrorTypes.VALIDATION,
-                'Invalid guild or channel information provided.'
+                'Les informations du serveur ou du salon fournies sont invalides.'
             );
         }
 
         if (options.nameTemplate) {
             validateChannelNameTemplate(options.nameTemplate);
         }
+
         if (options.bitrate) {
-            validateBitrate(options.bitrate / 1000); 
+            validateBitrate(options.bitrate / 1000);
         }
+
         if (options.userLimit !== undefined) {
             validateUserLimit(options.userLimit);
         }
@@ -209,17 +227,20 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
 
         if (config.triggerChannels.includes(channelId)) {
             throw new TitanBotError(
-                'Channel already configured as Join to Create trigger',
+                'Le salon est déjà configuré comme déclencheur Join to Create',
                 ErrorTypes.VALIDATION,
-                'This channel is already set up as a Join to Create trigger.'
+                'Ce salon est déjà configuré comme déclencheur Join to Create.'
             );
         }
 
-        if (Array.isArray(config.triggerChannels) && config.triggerChannels.length > 0) {
+        if (
+            Array.isArray(config.triggerChannels) &&
+            config.triggerChannels.length > 0
+        ) {
             throw new TitanBotError(
-                'Guild already has a Join to Create trigger configured',
+                'Le serveur possède déjà un déclencheur Join to Create',
                 ErrorTypes.VALIDATION,
-                'This server already has a Join to Create channel configured. Use `/jointocreate dashboard` to modify it, or remove it before creating a new one.',
+                'Ce serveur possède déjà un salon Join to Create configuré. Utilisez `/jointocreate dashboard` pour le modifier ou supprimez-le avant d’en créer un nouveau.',
                 {
                     guildId,
                     existingTriggerChannelId: config.triggerChannels[0],
@@ -236,25 +257,36 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
             if (!config.channelOptions) {
                 config.channelOptions = {};
             }
+
             config.channelOptions[channelId] = {
                 nameTemplate: options.nameTemplate || config.channelNameTemplate,
-                userLimit: options.userLimit !== undefined ? options.userLimit : config.userLimit,
+                userLimit:
+                    options.userLimit !== undefined
+                        ? options.userLimit
+                        : config.userLimit,
                 bitrate: options.bitrate || config.bitrate,
                 categoryId: options.categoryId || null,
                 createdAt: Date.now()
             };
         }
 
-        const saveResult = await saveJoinToCreateConfig(client, guildId, config);
+        const saveResult = await saveJoinToCreateConfig(
+            client,
+            guildId,
+            config
+        );
+
         if (!saveResult) {
             throw new TitanBotError(
-                'Failed to save Join to Create configuration',
+                'Impossible d’enregistrer la configuration Join to Create',
                 ErrorTypes.DATABASE,
-                'Failed to set up Join to Create system. Please try again.'
+                'Impossible de configurer le système Join to Create. Veuillez réessayer.'
             );
         }
 
-        logger.info(`Initialized Join to Create for guild ${guildId} with trigger channel ${channelId}`);
+        logger.info(
+            `Join to Create initialisé pour le serveur ${guildId} avec le salon déclencheur ${channelId}`
+        );
 
         return config;
 
@@ -262,21 +294,27 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
         if (error instanceof TitanBotError) {
             throw error;
         }
+
         throw new TitanBotError(
-            `Failed to initialize Join to Create: ${error.message}`,
+            `Impossible d’initialiser Join to Create : ${error.message}`,
             ErrorTypes.DATABASE,
-            'Failed to set up Join to Create system.'
+            'Impossible de configurer le système Join to Create.'
         );
     }
 }
 
-export async function updateChannelConfig(client, guildId, channelId, updates) {
+export async function updateChannelConfig(
+    client,
+    guildId,
+    channelId,
+    updates
+) {
     try {
         if (!client || !client.db) {
             throw new TitanBotError(
-                'Database service not available',
+                'Service de base de données indisponible',
                 ErrorTypes.DATABASE,
-                'Database service is currently unavailable. Please try again later.'
+                'Le service de base de données est actuellement indisponible. Veuillez réessayer plus tard.'
             );
         }
 
@@ -284,18 +322,20 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
 
         if (!config.triggerChannels.includes(channelId)) {
             throw new TitanBotError(
-                'Channel is not configured as a Join to Create trigger',
+                'Le salon n’est pas configuré comme déclencheur Join to Create',
                 ErrorTypes.VALIDATION,
-                'This channel is not set up as a Join to Create trigger.'
+                'Ce salon n’est pas configuré comme déclencheur Join to Create.'
             );
         }
 
         if (updates.nameTemplate) {
             validateChannelNameTemplate(updates.nameTemplate);
         }
+
         if (updates.bitrate !== undefined) {
             validateBitrate(updates.bitrate / 1000);
         }
+
         if (updates.userLimit !== undefined) {
             validateUserLimit(updates.userLimit);
         }
@@ -312,9 +352,12 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
 
         await saveJoinToCreateConfig(client, guildId, config);
 
-        logger.info(`Updated Join to Create config for channel ${channelId} in guild ${guildId}`, {
-            updates: Object.keys(updates)
-        });
+        logger.info(
+            `Configuration Join to Create mise à jour pour le salon ${channelId} du serveur ${guildId}`,
+            {
+                updates: Object.keys(updates)
+            }
+        );
 
         return config.channelOptions[channelId];
 
@@ -322,44 +365,56 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
         if (error instanceof TitanBotError) {
             throw error;
         }
+
         throw new TitanBotError(
-            `Failed to update channel config: ${error.message}`,
+            `Impossible de mettre à jour la configuration du salon : ${error.message}`,
             ErrorTypes.DATABASE,
-            'Failed to update configuration.'
+            'Impossible de mettre à jour la configuration.'
         );
     }
 }
 
-export async function removeTriggerChannel(client, guildId, channelId) {
+export async function removeTriggerChannel(
+    client,
+    guildId,
+    channelId
+) {
     try {
         if (!client || !client.db) {
             throw new TitanBotError(
-                'Database service not available',
+                'Service de base de données indisponible',
                 ErrorTypes.DATABASE,
-                'Database service is currently unavailable. Please try again later.'
+                'Le service de base de données est actuellement indisponible. Veuillez réessayer plus tard.'
             );
         }
 
         const config = await getJoinToCreateConfig(client, guildId);
 
         const index = config.triggerChannels.indexOf(channelId);
+
         if (index === -1) {
             throw new TitanBotError(
-                'Channel not found in Join to Create triggers',
+                'Salon introuvable dans les déclencheurs Join to Create',
                 ErrorTypes.VALIDATION,
-                'This channel is not configured as a Join to Create trigger.'
+                'Ce salon n’est pas configuré comme déclencheur Join to Create.'
             );
         }
 
         config.triggerChannels.splice(index, 1);
         config.enabled = config.triggerChannels.length > 0;
 
-        if (config.channelOptions && config.channelOptions[channelId]) {
+        if (
+            config.channelOptions &&
+            config.channelOptions[channelId]
+        ) {
             delete config.channelOptions[channelId];
         }
 
         if (config.temporaryChannels) {
-            for (const [tempChannelId, tempInfo] of Object.entries(config.temporaryChannels)) {
+            for (
+                const [tempChannelId, tempInfo]
+                of Object.entries(config.temporaryChannels)
+            ) {
                 if (tempInfo.triggerChannelId === channelId) {
                     delete config.temporaryChannels[tempChannelId];
                 }
@@ -368,7 +423,9 @@ export async function removeTriggerChannel(client, guildId, channelId) {
 
         await saveJoinToCreateConfig(client, guildId, config);
 
-        logger.info(`Removed Join to Create trigger channel ${channelId} from guild ${guildId}`);
+        logger.info(
+            `Salon déclencheur Join to Create ${channelId} supprimé du serveur ${guildId}`
+        );
 
         return true;
 
@@ -376,10 +433,11 @@ export async function removeTriggerChannel(client, guildId, channelId) {
         if (error instanceof TitanBotError) {
             throw error;
         }
+
         throw new TitanBotError(
-            `Failed to remove trigger channel: ${error.message}`,
+            `Impossible de supprimer le salon déclencheur : ${error.message}`,
             ErrorTypes.DATABASE,
-            'Failed to remove trigger channel.'
+            'Impossible de supprimer le salon déclencheur.'
         );
     }
 }
@@ -388,9 +446,9 @@ export async function getConfiguration(client, guildId) {
     try {
         if (!client || !client.db) {
             throw new TitanBotError(
-                'Database service not available',
+                'Service de base de données indisponible',
                 ErrorTypes.DATABASE,
-                'Database service is currently unavailable. Please try again later.'
+                'Le service de base de données est actuellement indisponible. Veuillez réessayer plus tard.'
             );
         }
 
@@ -400,49 +458,66 @@ export async function getConfiguration(client, guildId) {
         if (error instanceof TitanBotError) {
             throw error;
         }
+
         throw new TitanBotError(
-            `Failed to retrieve configuration: ${error.message}`,
+            `Impossible de récupérer la configuration : ${error.message}`,
             ErrorTypes.DATABASE,
-            'Failed to retrieve settings.'
+            'Impossible de récupérer les paramètres.'
         );
     }
 }
 
-export async function isTriggerChannel(client, guildId, channelId) {
+export async function isTriggerChannel(
+    client,
+    guildId,
+    channelId
+) {
     try {
         const config = await getConfiguration(client, guildId);
         return config.triggerChannels.includes(channelId);
     } catch (error) {
-        logger.error(`Error checking if channel is trigger: ${error.message}`);
+        logger.error(
+            `Erreur lors de la vérification du salon déclencheur : ${error.message}`
+        );
         return false;
     }
 }
 
-export async function getChannelConfiguration(client, guildId, channelId) {
+export async function getChannelConfiguration(
+    client,
+    guildId,
+    channelId
+) {
     try {
         const config = await getConfiguration(client, guildId);
 
-        if (!config.triggerChannels || !Array.isArray(config.triggerChannels) || !config.triggerChannels.includes(channelId)) {
+        if (
+            !config.triggerChannels ||
+            !Array.isArray(config.triggerChannels) ||
+            !config.triggerChannels.includes(channelId)
+        ) {
             throw new TitanBotError(
-                'Channel is not a valid Join to Create trigger',
+                'Le salon n’est pas un déclencheur Join to Create valide',
                 ErrorTypes.VALIDATION,
-                'This channel is not set up as a Join to Create trigger.'
+                'Ce salon n’est pas configuré comme déclencheur Join to Create.'
             );
         }
 
         return {
             ...config,
-            channelConfig: config.channelOptions?.[channelId] || {}
+            channelConfig:
+                config.channelOptions?.[channelId] || {}
         };
 
     } catch (error) {
         if (error instanceof TitanBotError) {
             throw error;
         }
+
         throw new TitanBotError(
-            `Failed to get channel configuration: ${error.message}`,
+            `Impossible de récupérer la configuration du salon : ${error.message}`,
             ErrorTypes.DATABASE,
-            'Failed to retrieve channel configuration. Please try again.'
+            'Impossible de récupérer la configuration du salon. Veuillez réessayer.'
         );
     }
 }
@@ -452,38 +527,63 @@ export function hasManageGuildPermission(member) {
         if (!member || !member.permissions) {
             return false;
         }
-        return member.permissions.has(PermissionFlagsBits.ManageGuild);
+
+        return member.permissions.has(
+            PermissionFlagsBits.ManageGuild
+        );
+
     } catch (error) {
-        logger.error('Error checking ManageGuild permission:', error);
+        logger.error(
+            'Erreur lors de la vérification de la permission ManageGuild :',
+            error
+        );
         return false;
     }
 }
 
-export async function logConfigurationChange(client, guildId, userId, action, details) {
+export async function logConfigurationChange(
+    client,
+    guildId,
+    userId,
+    action,
+    details
+) {
     try {
         await logEvent({
             client,
             guildId,
             eventType: EVENT_TYPES.COUNTER_CONFIG,
             data: {
-                title: 'Join to Create Updated',
+                title: 'Configuration Join to Create mise à jour',
                 lines: [
                     formatLogLine('Action', action),
-                    formatLogLine('Details', typeof details === 'string' ? details : JSON.stringify(details)),
+                    formatLogLine(
+                        'Détails',
+                        typeof details === 'string'
+                            ? details
+                            : JSON.stringify(details)
+                    ),
                 ],
                 userId,
             },
         });
+
     } catch (error) {
-        logger.warn(`Failed to log Join to Create configuration change: ${error.message}`);
+        logger.warn(
+            `Impossible d’enregistrer la modification de configuration Join to Create : ${error.message}`
+        );
     }
 }
 
-export async function createTemporaryChannel(guild, member, options = {}) {
+export async function createTemporaryChannel(
+    guild,
+    member,
+    options = {}
+) {
     try {
         if (!guild || !member) {
             throw new TitanBotError(
-                'Invalid guild or member',
+                'Serveur ou membre invalide',
                 ErrorTypes.VALIDATION
             );
         }
@@ -498,39 +598,58 @@ export async function createTemporaryChannel(guild, member, options = {}) {
         if (nameTemplate) {
             validateChannelNameTemplate(nameTemplate);
         }
+
         if (userLimit !== undefined) {
             validateUserLimit(userLimit);
         }
+
         if (bitrate !== undefined) {
             validateBitrate(bitrate / 1000);
         }
 
-        const channelName = formatChannelName(nameTemplate || '{username}\'s Room', {
-            username: member.user.username,
-            displayName: member.displayName,
-            userTag: member.user.tag,
-            guildName: guild.name
-        });
+        const channelName = formatChannelName(
+            nameTemplate || '{username}\'s Room',
+            {
+                username: member.user.username,
+                displayName: member.displayName,
+                userTag: member.user.tag,
+                guildName: guild.name
+            }
+        );
 
         const tempChannel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildVoice,
             parent: parentId,
-            userLimit: userLimit === 0 ? undefined : userLimit,
+            userLimit:
+                userLimit === 0
+                    ? undefined
+                    : userLimit,
             bitrate: bitrate || 64000,
+
             permissionOverwrites: [
                 {
                     id: member.id,
-                    allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.PrioritySpeaker, PermissionFlagsBits.MoveMembers]
+                    allow: [
+                        PermissionFlagsBits.Connect,
+                        PermissionFlagsBits.Speak,
+                        PermissionFlagsBits.PrioritySpeaker,
+                        PermissionFlagsBits.MoveMembers
+                    ]
                 },
                 {
                     id: guild.id,
-                    allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
+                    allow: [
+                        PermissionFlagsBits.Connect,
+                        PermissionFlagsBits.Speak
+                    ]
                 }
             ]
         });
 
-        logger.info(`Created temporary voice channel ${tempChannel.name} (${tempChannel.id}) for user ${member.user.tag}`);
+        logger.info(
+            `Salon vocal temporaire ${tempChannel.name} (${tempChannel.id}) créé pour l’utilisateur ${member.user.tag}`
+        );
 
         return {
             id: tempChannel.id,
@@ -542,10 +661,11 @@ export async function createTemporaryChannel(guild, member, options = {}) {
         if (error instanceof TitanBotError) {
             throw error;
         }
+
         throw new TitanBotError(
-            `Failed to create temporary channel: ${error.message}`,
+            `Impossible de créer le salon temporaire : ${error.message}`,
             ErrorTypes.DISCORD_API,
-            'Failed to create your temporary voice channel. Please contact an administrator.'
+            'Impossible de créer votre salon vocal temporaire. Veuillez contacter un administrateur.'
         );
     }
 }
