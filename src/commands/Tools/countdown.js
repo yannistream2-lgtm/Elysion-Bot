@@ -11,11 +11,11 @@ export { activeCountdowns };
 export default {
     data: new SlashCommandBuilder()
         .setName("countdown")
-        .setDescription("Start a countdown timer")
+        .setDescription("Démarrer un compte à rebours")
         .addIntegerOption((option) =>
             option
                 .setName("minutes")
-                .setDescription("Number of minutes to count down (0-1440)")
+                .setDescription("Nombre de minutes du compte à rebours (0-1440)")
                 .setMinValue(0)
                 .setMaxValue(1440)
                 .setRequired(false),
@@ -23,7 +23,7 @@ export default {
         .addIntegerOption((option) =>
             option
                 .setName("seconds")
-                .setDescription("Number of seconds to count down (0-59)")
+                .setDescription("Nombre de secondes du compte à rebours (0-59)")
                 .setMinValue(0)
                 .setMaxValue(59)
                 .setRequired(false),
@@ -31,14 +31,14 @@ export default {
         .addStringOption((option) =>
             option
                 .setName("title")
-                .setDescription("Optional title for the countdown")
+                .setDescription("Titre facultatif du compte à rebours")
                 .setRequired(false),
         ),
 
     async execute(interaction) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
-            logger.warn(`Countdown interaction defer failed`, {
+            logger.warn(`Échec du report de l'interaction Countdown`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 commandName: 'countdown'
@@ -48,16 +48,16 @@ export default {
 
         const minutes = interaction.options.getInteger("minutes") || 0;
         const seconds = interaction.options.getInteger("seconds") || 0;
-        const title = interaction.options.getString("title") || "Countdown Timer";
+        const title = interaction.options.getString("title") || "Compte à rebours";
 
         const totalSeconds = minutes * 60 + seconds;
 
         if (totalSeconds <= 0) {
-            throw new Error("Please specify a duration of at least 1 second.");
+            throw new Error("Veuillez spécifier une durée d'au moins 1 seconde.");
         }
 
         if (totalSeconds > 86400) {
-            throw new Error("Countdown cannot be longer than 24 hours.");
+            throw new Error("Le compte à rebours ne peut pas dépasser 24 heures.");
         }
 
         const endTime = Date.now() + totalSeconds * 1000;
@@ -67,7 +67,7 @@ export default {
 
         const initialEmbed = successEmbed(
             `⏱️ ${title}`,
-            `Time remaining: **${formatTime(totalSeconds)}**`,
+            `Temps restant : **${formatTime(totalSeconds)}**`,
         );
 
         const message = await interaction.channel.send({
@@ -89,7 +89,7 @@ export default {
         startCountdown(countdownId, countdownData, activeCountdowns);
 
         await InteractionHelper.safeEditReply(interaction, {
-            content: "✅ Countdown started!",
+            content: "✅ Compte à rebours démarré !",
             flags: MessageFlags.Ephemeral,
         });
     },
