@@ -9,103 +9,138 @@ const durationChoices = [
     { name: "5 minutes", value: 5 },
     { name: "10 minutes", value: 10 },
     { name: "30 minutes", value: 30 },
-    { name: "1 hour", value: 60 },
-    { name: "6 hours", value: 360 },
-    { name: "1 day", value: 1440 },
-    { name: "1 week", value: 10080 },
+    { name: "1 heure", value: 60 },
+    { name: "6 heures", value: 360 },
+    { name: "1 jour", value: 1440 },
+    { name: "1 semaine", value: 10080 },
 ];
 
 export default {
     data: new SlashCommandBuilder()
         .setName("timeout")
-        .setDescription("Timeout a user for a specific duration.")
+        .setDescription("Mettre un utilisateur en timeout pendant une durée spécifique.")
+
         .addUserOption((option) =>
             option
                 .setName("target")
-                .setDescription("User to timeout")
+                .setDescription("Utilisateur à mettre en timeout")
                 .setRequired(true),
         )
+
         .addIntegerOption(
             (option) =>
                 option
                     .setName("duration")
-                    .setDescription("Duration of the timeout")
+                    .setDescription("Durée du timeout")
                     .setRequired(true)
                     .addChoices(...durationChoices),
         )
+
         .addStringOption((option) =>
-            option.setName("reason").setDescription("Reason for the timeout"),
+            option
+                .setName("reason")
+                .setDescription("Raison du timeout"),
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+
+        .setDefaultMemberPermissions(
+            PermissionFlagsBits.ModerateMembers
+        ),
+
     category: "moderation",
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
-            logger.warn(`Timeout interaction defer failed`, {
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
-                commandName: 'timeout',
-            });
+            logger.warn(
+                `Échec du defer de l'interaction Timeout`,
+                {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'timeout',
+                }
+            );
+
             return;
         }
 
-        const targetUser = interaction.options.getUser("target");
-        const member = interaction.options.getMember("target");
-        const durationMinutes = interaction.options.getInteger("duration");
-        const reason = interaction.options.getString("reason") || "No reason provided";
+        const targetUser =
+            interaction.options.getUser("target");
+
+        const member =
+            interaction.options.getMember("target");
+
+        const durationMinutes =
+            interaction.options.getInteger("duration");
+
+        const reason =
+            interaction.options.getString("reason") ||
+            "Aucune raison fournie";
 
         if (!targetUser) {
             throw new TitanBotError(
-                'Missing target user',
+                'Utilisateur cible manquant',
                 ErrorTypes.USER_INPUT,
-                'You must specify a user to timeout.',
-                { subtype: 'invalid_user' },
+                'Vous devez spécifier un utilisateur à mettre en timeout.',
+                {
+                    subtype: 'invalid_user'
+                },
             );
         }
 
         if (targetUser.id === interaction.user.id) {
             throw new TitanBotError(
-                "Cannot timeout self",
+                "Impossible de se mettre soi-même en timeout",
                 ErrorTypes.VALIDATION,
-                "You cannot timeout yourself.",
+                "Vous ne pouvez pas vous mettre vous-même en timeout.",
             );
         }
+
         if (targetUser.id === client.user.id) {
             throw new TitanBotError(
-                "Cannot timeout bot",
+                "Impossible de mettre le bot en timeout",
                 ErrorTypes.VALIDATION,
-                "You cannot timeout the bot.",
+                "Vous ne pouvez pas mettre le bot en timeout.",
             );
         }
+
         if (!member) {
             throw new TitanBotError(
-                "Target not found",
+                "Utilisateur introuvable",
                 ErrorTypes.USER_INPUT,
-                "The target user is not currently in this server.",
+                "L'utilisateur ciblé n'est actuellement pas présent sur ce serveur.",
             );
         }
 
-        const durationMs = durationMinutes * 60 * 1000;
-        const result = await ModerationService.timeoutUser({
-            guild: interaction.guild,
-            member,
-            moderator: interaction.member,
-            durationMs,
-            reason,
-        });
+        const durationMs =
+            durationMinutes * 60 * 1000;
+
+        const result =
+            await ModerationService.timeoutUser({
+                guild: interaction.guild,
+                member,
+                moderator: interaction.member,
+                durationMs,
+                reason,
+            });
 
         const durationDisplay =
-            durationChoices.find((c) => c.value === durationMinutes)
-                ?.name || `${durationMinutes} minutes`;
+            durationChoices.find(
+                (choice) =>
+                    choice.value === durationMinutes
+            )?.name ||
+            `${durationMinutes} minutes`;
 
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                successEmbed(
-                    `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
-                    `**Reason:** ${reason}\n**Case ID:** #${result.caseId}`,
-                ),
-            ],
-        });
+        await InteractionHelper.safeEditReply(
+            interaction,
+            {
+                embeds: [
+                    successEmbed(
+                        `⏳ **Timeout** de ${targetUser.tag} pendant ${durationDisplay}.`,
+                        `**Raison :** ${reason}\n**ID du cas :** #${result.caseId}`,
+                    ),
+                ],
+            }
+        );
     },
 };
