@@ -23,7 +23,7 @@ export const botConfig = {
     // 5 = Participe à
     activities: [
       {
-        name: "Custom Status", // requis par l'API Discord, non affiché côté client
+        name: "Joue à", // requis par l'API Discord, non affiché côté client
         state: "Elysion | Age of Heroes", // ce que les utilisateurs voient réellement
         type: 0, // Joue à
       },
@@ -121,12 +121,6 @@ export const botConfig = {
       giveaway: {
         active: "#57F287",
         ended: "#ED4245",
-      },
-      ticket: {
-        open: "#57F287",
-        claimed: "#FAA61A",
-        closed: "#ED4245",
-        pending: "#99AAB5",
       },
       economy: "#F1C40F",
       birthday: "#E91E63",
@@ -488,7 +482,6 @@ const COMMAND_CATEGORY_FEATURE_MAP = {
   leveling: "leveling",
   logging: "logging",
   moderation: "moderation",
-  music: "music",
   reaction_roles: "reactionRoles",
   search: "search",
   serverstats: "counter",
