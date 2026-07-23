@@ -1,23 +1,24 @@
 export const shopItems = [
     {
         id: 'extra_work',
-        name: 'Extra Work Shift',
+        name: 'Service de Travail Supplémentaire',
         price: 5000,
-        description: 'Allows 1 extra use of the `/work` command.',
+        description: 'Permet d’utiliser la commande `/work` 1 fois supplémentaire.',
         type: 'consumable',
         maxQuantity: 5,
-cooldown: 86400000,
+        cooldown: 86400000,
         effect: {
             type: 'command_boost',
             command: 'work',
             uses: 1
         }
     },
+
     {
         id: 'bank_upgrade_1',
-        name: 'Bank Upgrade I',
+        name: 'Amélioration Bancaire I',
         price: 15000,
-        description: 'Increases bank capacity and allows more funds to be deposited.',
+        description: 'Augmente la capacité de votre banque et permet d’y déposer davantage de pièces.',
         type: 'upgrade',
         maxLevel: 5,
         effect: {
@@ -25,11 +26,12 @@ cooldown: 86400000,
             multiplier: 1.5
         }
     },
+
     {
         id: 'diamond_pickaxe',
-        name: 'Diamond Pickaxe',
+        name: 'Pioche en Diamant',
         price: 50000,
-        description: 'Increases yield from `/mine`',
+        description: 'Augmente les ressources obtenues avec la commande `/mine`.',
         type: 'tool',
         durability: 100,
         effect: {
@@ -37,23 +39,25 @@ cooldown: 86400000,
             multiplier: 2.0
         }
     },
+
     {
         id: 'premium_role',
-        name: 'Premium Server Role',
+        name: 'Rôle Premium du Serveur',
         price: 15000,
-        description: 'A special role granting a fancy color and a 10% daily bonus.',
+        description: 'Un rôle spécial offrant une couleur exclusive et un bonus quotidien de 10 %.',
         type: 'role',
-roleId: null,
+        roleId: null,
         effect: {
             type: 'daily_bonus',
             multiplier: 1.1
         }
     },
+
     {
         id: 'lucky_clover',
-        name: 'Lucky Clover',
+        name: 'Trèfle Porte-Bonheur',
         price: 10000,
-        description: 'Increases the chance of winning a higher payout on `/gamble` once.',
+        description: 'Augmente les chances d’obtenir une récompense plus élevée avec `/gamble` une fois.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
@@ -62,11 +66,12 @@ roleId: null,
             uses: 1
         }
     },
+
     {
         id: 'fishing_rod',
-        name: '🎣 Fishing Rod',
+        name: '🎣 Canne à Pêche',
         price: 5000,
-        description: 'Used for fishing commands',
+        description: 'Utilisée pour les commandes de pêche.',
         type: 'tool',
         durability: 100,
         effect: {
@@ -74,11 +79,12 @@ roleId: null,
             multiplier: 1.0
         }
     },
+
     {
         id: 'pickaxe',
-        name: '⛏️ Pickaxe',
+        name: '⛏️ Pioche',
         price: 7500,
-        description: 'Used for mining commands',
+        description: 'Utilisée pour les commandes de minage.',
         type: 'tool',
         durability: 100,
         effect: {
@@ -86,11 +92,12 @@ roleId: null,
             multiplier: 1.2
         }
     },
+
     {
         id: 'laptop',
-        name: '💻 Laptop',
+        name: '💻 Ordinateur Portable',
         price: 15000,
-        description: 'Increases work earnings',
+        description: 'Augmente les gains obtenus grâce au travail.',
         type: 'tool',
         durability: 200,
         effect: {
@@ -98,11 +105,12 @@ roleId: null,
             multiplier: 1.5
         }
     },
+
     {
         id: 'lucky_charm',
-        name: '🍀 Lucky Charm',
+        name: '🍀 Porte-Bonheur',
         price: 10000,
-        description: 'Increases luck for gambling. Has 3 uses before being consumed.',
+        description: 'Augmente votre chance lors des jeux d’argent. Possède 3 utilisations avant d’être consommé.',
         type: 'consumable',
         maxQuantity: 10,
         effect: {
@@ -111,11 +119,12 @@ roleId: null,
             uses: 3
         }
     },
+
     {
         id: 'bank_note',
-        name: '📜 Bank Note',
+        name: '📜 Billet Bancaire',
         price: 25000,
-        description: 'Increases bank capacity by 10,000. Can be purchased multiple times.',
+        description: 'Augmente la capacité de votre banque de 10 000 pièces. Peut être acheté plusieurs fois.',
         type: 'tool',
         durability: null,
         effect: {
@@ -123,11 +132,12 @@ roleId: null,
             increase: 10000
         }
     },
+
     {
         id: 'personal_safe',
-        name: '🔒 Personal Safe',
+        name: '🔒 Coffre-Fort Personnel',
         price: 30000,
-        description: 'Protects your money from theft. Prevents others from robbing you.',
+        description: 'Protège votre argent contre les vols et empêche les autres joueurs de vous braquer.',
         type: 'tool',
         durability: null,
         effect: {
@@ -152,52 +162,65 @@ export function getItemPrice(itemId) {
 
 export function validatePurchase(itemId, userData) {
     const item = getItemById(itemId);
+
     if (!item) {
-        return { valid: false, reason: 'Item not found' };
+        return {
+            valid: false,
+            reason: 'Objet introuvable'
+        };
     }
 
     const inventory = userData.inventory || {};
     const upgrades = userData.upgrades || {};
 
+    // Vérification de la quantité maximale des objets consommables.
     if (item.type === 'consumable' && item.maxQuantity) {
         const currentQuantity = inventory[itemId] || 0;
+
         if (currentQuantity >= item.maxQuantity) {
-            return { 
-                valid: false, 
-                reason: `You can only have a maximum of ${item.maxQuantity} ${item.name}s` 
+            return {
+                valid: false,
+                reason: `Vous ne pouvez posséder que ${item.maxQuantity} ${item.name} maximum.`
             };
         }
     }
 
+    // Vérification du niveau maximum des améliorations.
     if (item.type === 'upgrade' && item.maxLevel) {
-        
+
         if (upgrades[itemId]) {
-            return { 
-                valid: false, 
-                reason: `You've already purchased ${item.name}` 
+            return {
+                valid: false,
+                reason: `Vous avez déjà acheté ${item.name}.`
             };
         }
     }
 
+    // Vérification des outils déjà possédés.
     if (item.type === 'tool') {
-        
+
         const currentQuantity = inventory[itemId] || 0;
+
         if (itemId !== 'bank_note' && currentQuantity > 0) {
-            return { 
-                valid: false, 
-                reason: `You already have a ${item.name}` 
+            return {
+                valid: false,
+                reason: `Vous possédez déjà ${item.name}.`
             };
         }
     }
 
+    // Vérification du rôle Premium déjà possédé.
     if (item.type === 'role' && item.roleId) {
+
         if (userData.roles?.includes(item.roleId)) {
-            return { 
-                valid: false, 
-                reason: `You already have the ${item.name} role` 
+            return {
+                valid: false,
+                reason: `Vous possédez déjà le rôle ${item.name}.`
             };
         }
     }
 
-    return { valid: true };
+    return {
+        valid: true
+    };
 }
