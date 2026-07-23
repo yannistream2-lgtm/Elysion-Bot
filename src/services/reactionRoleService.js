@@ -1,3 +1,4 @@
+
 // reactionRoleService.js
 
 import { logger } from '../utils/logger.js';
@@ -19,9 +20,9 @@ const DANGEROUS_PERMISSIONS = [
 function validateGuildId(guildId) {
     if (!guildId || typeof guildId !== 'string' || !/^\d{17,19}$/.test(guildId)) {
         throw createError(
-            `Invalid guild ID: ${guildId}`,
+            `Identifiant du serveur invalide : ${guildId}`,
             ErrorTypes.VALIDATION,
-            'Invalid server ID provided.',
+            'L’identifiant du serveur fourni est invalide.',
             { guildId }
         );
     }
@@ -30,9 +31,9 @@ function validateGuildId(guildId) {
 function validateMessageId(messageId) {
     if (!messageId || typeof messageId !== 'string' || !/^\d{17,19}$/.test(messageId)) {
         throw createError(
-            `Invalid message ID: ${messageId}`,
+            `Identifiant du message invalide : ${messageId}`,
             ErrorTypes.VALIDATION,
-            'Invalid message ID provided.',
+            'L’identifiant du message fourni est invalide.',
             { messageId }
         );
     }
@@ -41,9 +42,9 @@ function validateMessageId(messageId) {
 function validateRoleId(roleId) {
     if (!roleId || typeof roleId !== 'string' || !/^\d{17,19}$/.test(roleId)) {
         throw createError(
-            `Invalid role ID: ${roleId}`,
+            `Identifiant du rôle invalide : ${roleId}`,
             ErrorTypes.VALIDATION,
-            'Invalid role ID provided.',
+            'L’identifiant du rôle fourni est invalide.',
             { roleId }
         );
     }
@@ -62,41 +63,54 @@ export function hasDangerousPermissions(role) {
 
 async function validateRoleSafety(client, guildId, roleId) {
     const guild = client.guilds?.cache?.get(guildId) || await client.guilds?.fetch?.(guildId).catch(() => null);
+
     if (!guild) {
         throw createError(
-            `Guild not found for role validation: ${guildId}`,
+            `Serveur introuvable lors de la validation du rôle : ${guildId}`,
             ErrorTypes.VALIDATION,
-            'Server not found while validating reaction roles.',
+            'Serveur introuvable lors de la validation des rôles par réaction.',
             { guildId, roleId }
         );
     }
 
     const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId).catch(() => null);
+
     if (!role) {
         throw createError(
-            `Role not found: ${roleId}`,
+            `Rôle introuvable : ${roleId}`,
             ErrorTypes.VALIDATION,
-            'One or more selected roles no longer exist.',
+            'Un ou plusieurs rôles sélectionnés n’existent plus.',
             { guildId, roleId }
         );
     }
 
     if (hasDangerousPermissions(role)) {
         throw createError(
-            `Dangerous role permission detected: ${roleId}`,
+            `Permission dangereuse détectée sur le rôle : ${roleId}`,
             ErrorTypes.PERMISSION,
-            'For security reasons, high-privilege roles cannot be assigned through reaction roles.',
-            { guildId, roleId, roleName: role.name, dangerousPermissions: DANGEROUS_PERMISSIONS }
+            'Pour des raisons de sécurité, les rôles disposant de privilèges élevés ne peuvent pas être attribués via les rôles par réaction.',
+            {
+                guildId,
+                roleId,
+                roleName: role.name,
+                dangerousPermissions: DANGEROUS_PERMISSIONS
+            }
         );
     }
 
     const botHighestRole = guild.members.me?.roles?.highest;
+
     if (!botHighestRole || role.position >= botHighestRole.position) {
         throw createError(
-            `Role above bot hierarchy: ${roleId}`,
+            `Rôle situé au-dessus de la hiérarchie du bot : ${roleId}`,
             ErrorTypes.PERMISSION,
-            'I cannot assign this role because it is equal to or above my highest role.',
-            { guildId, roleId, rolePosition: role.position, botRolePosition: botHighestRole?.position }
+            'Je ne peux pas attribuer ce rôle car il est au même niveau ou au-dessus de mon rôle le plus élevé.',
+            {
+                guildId,
+                roleId,
+                rolePosition: role.position,
+                botRolePosition: botHighestRole?.position
+            }
         );
     }
 }
@@ -108,17 +122,28 @@ export async function getReactionRoleMessage(client, guildId, messageId) {
         
         const key = getReactionRoleKey(guildId, messageId);
         const data = await client.db.get(key);
+
         return data || null;
+
     } catch (error) {
         if (error.name === 'TitanBotError') {
             throw error;
         }
-        logger.error(`Error getting reaction role message ${messageId} in guild ${guildId}:`, error);
+
+        logger.error(
+            `Erreur lors de la récupération du message de rôles par réaction ${messageId} sur le serveur ${guildId} :`,
+            error
+        );
+
         throw createError(
-            `Database error retrieving reaction role message`,
+            'Erreur de base de données lors de la récupération du message de rôles par réaction',
             ErrorTypes.DATABASE,
-            'Failed to retrieve reaction role data. Please try again.',
-            { guildId, messageId, originalError: error.message }
+            'Impossible de récupérer les données des rôles par réaction. Veuillez réessayer.',
+            {
+                guildId,
+                messageId,
+                originalError: error.message
+            }
         );
     }
 }
@@ -130,28 +155,31 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
         
         if (!channelId || typeof channelId !== 'string' || !/^\d{17,19}$/.test(channelId)) {
             throw createError(
-                `Invalid channel ID: ${channelId}`,
+                `Identifiant du salon invalide : ${channelId}`,
                 ErrorTypes.VALIDATION,
-                'Invalid channel ID provided.',
+                'L’identifiant du salon fourni est invalide.',
                 { channelId }
             );
         }
         
         if (!Array.isArray(roleIds) || roleIds.length === 0) {
             throw createError(
-                'No roles provided',
+                'Aucun rôle fourni',
                 ErrorTypes.VALIDATION,
-                'You must provide at least one role.',
+                'Vous devez fournir au moins un rôle.',
                 { roleIds }
             );
         }
         
         if (roleIds.length > MAX_ROLES_PER_MESSAGE) {
             throw createError(
-                `Too many roles: ${roleIds.length}`,
+                `Trop de rôles : ${roleIds.length}`,
                 ErrorTypes.VALIDATION,
-                `You can only add up to ${MAX_ROLES_PER_MESSAGE} roles per reaction role message.`,
-                { roleIds, limit: MAX_ROLES_PER_MESSAGE }
+                `Vous pouvez ajouter au maximum ${MAX_ROLES_PER_MESSAGE} rôles par message de rôles par réaction.`,
+                {
+                    roleIds,
+                    limit: MAX_ROLES_PER_MESSAGE
+                }
             );
         }
 
@@ -171,18 +199,31 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
         const key = getReactionRoleKey(guildId, messageId);
         await client.db.set(key, reactionRoleData);
         
-        logger.info(`Created reaction role message ${messageId} in guild ${guildId} with ${roleIds.length} roles`);
+        logger.info(
+            `Message de rôles par réaction ${messageId} créé sur le serveur ${guildId} avec ${roleIds.length} rôles`
+        );
+
         return reactionRoleData;
+
     } catch (error) {
         if (error.name === 'TitanBotError') {
             throw error;
         }
-        logger.error(`Error creating reaction role message in guild ${guildId}:`, error);
+
+        logger.error(
+            `Erreur lors de la création du message de rôles par réaction sur le serveur ${guildId} :`,
+            error
+        );
+
         throw createError(
-            `Database error creating reaction role message`,
+            'Erreur de base de données lors de la création du message de rôles par réaction',
             ErrorTypes.DATABASE,
-            'Failed to save reaction role data. Please try again.',
-            { guildId, messageId, originalError: error.message }
+            'Impossible d’enregistrer les données des rôles par réaction. Veuillez réessayer.',
+            {
+                guildId,
+                messageId,
+                originalError: error.message
+            }
         );
     }
 }
@@ -192,9 +233,11 @@ export async function addReactionRole(client, guildId, messageId, emoji, roleId)
         validateGuildId(guildId);
         validateMessageId(messageId);
         validateRoleId(roleId);
+
         await validateRoleSafety(client, guildId, roleId);
         
         const key = getReactionRoleKey(guildId, messageId);
+
         const data = await getReactionRoleMessage(client, guildId, messageId) || {
             messageId,
             guildId,
@@ -205,18 +248,32 @@ export async function addReactionRole(client, guildId, messageId, emoji, roleId)
         data.roles[emoji] = roleId;
         
         await client.db.set(key, data);
-        logger.info(`Added reaction role for emoji ${emoji} to message ${messageId} in guild ${guildId}`);
+
+        logger.info(
+            `Rôle par réaction ajouté pour l’emoji ${emoji} au message ${messageId} sur le serveur ${guildId}`
+        );
+
         return true;
+
     } catch (error) {
         if (error.name === 'TitanBotError') {
             throw error;
         }
-        logger.error(`Error adding reaction role in guild ${guildId}:`, error);
+
+        logger.error(
+            `Erreur lors de l’ajout du rôle par réaction sur le serveur ${guildId} :`,
+            error
+        );
+
         throw createError(
-            `Database error adding reaction role`,
+            'Erreur de base de données lors de l’ajout du rôle par réaction',
             ErrorTypes.DATABASE,
-            'Failed to add reaction role. Please try again.',
-            { guildId, messageId, originalError: error.message }
+            'Impossible d’ajouter le rôle par réaction. Veuillez réessayer.',
+            {
+                guildId,
+                messageId,
+                originalError: error.message
+            }
         );
     }
 }
@@ -230,24 +287,40 @@ export async function deleteReactionRoleMessage(client, guildId, messageId) {
         const data = await getReactionRoleMessage(client, guildId, messageId);
         
         if (!data) {
-            
-            logger.debug(`Reaction role message ${messageId} does not exist in guild ${guildId}, nothing to delete`);
+            logger.debug(
+                `Le message de rôles par réaction ${messageId} n’existe pas sur le serveur ${guildId}, aucune suppression nécessaire`
+            );
+
             return true;
         }
         
         await client.db.delete(key);
-        logger.info(`Deleted reaction role message ${messageId} in guild ${guildId}`);
+
+        logger.info(
+            `Message de rôles par réaction ${messageId} supprimé du serveur ${guildId}`
+        );
+
         return true;
+
     } catch (error) {
         if (error.name === 'TitanBotError') {
             throw error;
         }
-        logger.error(`Error deleting reaction role message in guild ${guildId}:`, error);
+
+        logger.error(
+            `Erreur lors de la suppression du message de rôles par réaction sur le serveur ${guildId} :`,
+            error
+        );
+
         throw createError(
-            `Database error deleting reaction role message`,
+            'Erreur de base de données lors de la suppression du message de rôles par réaction',
             ErrorTypes.DATABASE,
-            'Failed to delete reaction role message. Please try again.',
-            { guildId, messageId, originalError: error.message }
+            'Impossible de supprimer le message de rôles par réaction. Veuillez réessayer.',
+            {
+                guildId,
+                messageId,
+                originalError: error.message
+            }
         );
     }
 }
@@ -268,23 +341,40 @@ export async function removeReactionRole(client, guildId, messageId, emoji) {
 
         if (Object.keys(data.roles).length === 0) {
             await client.db.delete(key);
-            logger.info(`Removed last reaction role from message ${messageId}, deleted message data`);
+
+            logger.info(
+                `Dernier rôle par réaction supprimé du message ${messageId}, données du message supprimées`
+            );
+
         } else {
             await client.db.set(key, data);
-            logger.info(`Removed reaction role for emoji ${emoji} from message ${messageId}`);
+
+            logger.info(
+                `Rôle par réaction associé à l’emoji ${emoji} supprimé du message ${messageId}`
+            );
         }
         
         return true;
+
     } catch (error) {
         if (error.name === 'TitanBotError') {
             throw error;
         }
-        logger.error(`Error removing reaction role in guild ${guildId}:`, error);
+
+        logger.error(
+            `Erreur lors de la suppression du rôle par réaction sur le serveur ${guildId} :`,
+            error
+        );
+
         throw createError(
-            `Database error removing reaction role`,
+            'Erreur de base de données lors de la suppression du rôle par réaction',
             ErrorTypes.DATABASE,
-            'Failed to remove reaction role. Please try again.',
-            { guildId, messageId, originalError: error.message }
+            'Impossible de supprimer le rôle par réaction. Veuillez réessayer.',
+            {
+                guildId,
+                messageId,
+                originalError: error.message
+            }
         );
     }
 }
@@ -296,6 +386,7 @@ export async function getAllReactionRoleMessages(client, guildId) {
         const prefix = getReactionRolesPrefix(guildId);
         
         let keys;
+
         try {
             keys = await client.db.list(prefix);
             
@@ -304,13 +395,16 @@ export async function getAllReactionRoleMessages(client, guildId) {
                     
                 } else if (keys.value && Array.isArray(keys.value)) {
                     keys = keys.value;
+
                 } else {
                     const allKeys = await client.db.list();
                     
                     if (Array.isArray(allKeys)) {
                         keys = allKeys.filter(key => key.startsWith(prefix));
+
                     } else if (allKeys.value && Array.isArray(allKeys.value)) {
                         keys = allKeys.value.filter(key => key.startsWith(prefix));
+
                     } else {
                         return [];
                     }
@@ -318,13 +412,21 @@ export async function getAllReactionRoleMessages(client, guildId) {
             } else {
                 return [];
             }
+
         } catch (listError) {
-            logger.error(`Error listing reaction role keys for guild ${guildId}:`, listError);
+            logger.error(
+                `Erreur lors de la récupération des clés de rôles par réaction pour le serveur ${guildId} :`,
+                listError
+            );
+
             throw createError(
-                'Database error listing reaction roles',
+                'Erreur de base de données lors de la récupération des rôles par réaction',
                 ErrorTypes.DATABASE,
-                'Failed to retrieve reaction role list. Please try again.',
-                { guildId, originalError: listError.message }
+                'Impossible de récupérer la liste des rôles par réaction. Veuillez réessayer.',
+                {
+                    guildId,
+                    originalError: listError.message
+                }
             );
         }
         
@@ -340,37 +442,56 @@ export async function getAllReactionRoleMessages(client, guildId) {
                 
                 if (data) {
                     let actualData;
+
                     if (data && data.ok && data.value) {
                         actualData = data.value;
+
                     } else if (data && data.value) {
                         actualData = data.value;
+
                     } else {
                         actualData = data;
                     }
                     
                     if (actualData && actualData.messageId && actualData.channelId) {
                         messages.push(actualData);
+
                     } else if (actualData) {
-                        logger.warn(`Skipping malformed reaction role data for guild ${guildId}:`, actualData);
+                        logger.warn(
+                            `Données de rôles par réaction invalides ignorées pour le serveur ${guildId} :`,
+                            actualData
+                        );
                     }
                 }
+
             } catch (dataError) {
-                logger.warn(`Error getting data for reaction role key ${key}:`, dataError);
-                
+                logger.warn(
+                    `Erreur lors de la récupération des données pour la clé de rôles par réaction ${key} :`,
+                    dataError
+                );
             }
         }
 
         return messages;
+
     } catch (error) {
         if (error.name === 'TitanBotError') {
             throw error;
         }
-        logger.error(`Error getting all reaction role messages for guild ${guildId}:`, error);
+
+        logger.error(
+            `Erreur lors de la récupération de tous les messages de rôles par réaction pour le serveur ${guildId} :`,
+            error
+        );
+
         throw createError(
-            'Database error retrieving reaction roles',
+            'Erreur de base de données lors de la récupération des rôles par réaction',
             ErrorTypes.DATABASE,
-            'Failed to retrieve reaction role messages. Please try again.',
-            { guildId, originalError: error.message }
+            'Impossible de récupérer les messages de rôles par réaction. Veuillez réessayer.',
+            {
+                guildId,
+                originalError: error.message
+            }
         );
     }
 }
@@ -382,14 +503,15 @@ export async function setReactionRoleChannel(client, guildId, messageId, channel
         
         if (!channelId || typeof channelId !== 'string' || !/^\d{17,19}$/.test(channelId)) {
             throw createError(
-                `Invalid channel ID: ${channelId}`,
+                `Identifiant du salon invalide : ${channelId}`,
                 ErrorTypes.VALIDATION,
-                'Invalid channel ID provided.',
+                'L’identifiant du salon fourni est invalide.',
                 { channelId }
             );
         }
         
         const key = getReactionRoleKey(guildId, messageId);
+
         const data = await getReactionRoleMessage(client, guildId, messageId) || {
             messageId,
             guildId,
@@ -398,19 +520,35 @@ export async function setReactionRoleChannel(client, guildId, messageId, channel
         };
 
         data.channelId = channelId;
+
         await client.db.set(key, data);
-        logger.info(`Set channel ${channelId} for reaction role message ${messageId}`);
+
+        logger.info(
+            `Salon ${channelId} associé au message de rôles par réaction ${messageId}`
+        );
+
         return true;
+
     } catch (error) {
         if (error.name === 'TitanBotError') {
             throw error;
         }
-        logger.error(`Error setting channel for reaction role message ${messageId}:`, error);
+
+        logger.error(
+            `Erreur lors de la configuration du salon pour le message de rôles par réaction ${messageId} :`,
+            error
+        );
+
         throw createError(
-            `Database error setting reaction role channel`,
+            'Erreur de base de données lors de la configuration du salon des rôles par réaction',
             ErrorTypes.DATABASE,
-            'Failed to update reaction role channel. Please try again.',
-            { guildId, messageId, channelId, originalError: error.message }
+            'Impossible de mettre à jour le salon des rôles par réaction. Veuillez réessayer.',
+            {
+                guildId,
+                messageId,
+                channelId,
+                originalError: error.message
+            }
         );
     }
 }
@@ -432,11 +570,18 @@ export async function reconcileReactionRoleMessages(client, guildId = null) {
             summary.scannedGuilds += 1;
 
             let reactionRoleMessages = [];
+
             try {
                 reactionRoleMessages = await getAllReactionRoleMessages(client, targetGuildId);
+
             } catch (error) {
                 summary.errors += 1;
-                logger.warn(`Failed to fetch reaction role messages for reconciliation in guild ${targetGuildId}:`, error);
+
+                logger.warn(
+                    `Impossible de récupérer les messages de rôles par réaction pour la vérification du serveur ${targetGuildId} :`,
+                    error
+                );
+
                 continue;
             }
 
@@ -444,14 +589,24 @@ export async function reconcileReactionRoleMessages(client, guildId = null) {
                 continue;
             }
 
-            const guild = client.guilds.cache.get(targetGuildId) || await client.guilds.fetch(targetGuildId).catch(() => null);
+            const guild = client.guilds.cache.get(targetGuildId)
+                || await client.guilds.fetch(targetGuildId).catch(() => null);
+
             if (!guild) {
                 for (const reactionRoleMessage of reactionRoleMessages) {
                     summary.scannedMessages += 1;
-                    await client.db.delete(getReactionRoleKey(targetGuildId, reactionRoleMessage.messageId));
+
+                    await client.db.delete(
+                        getReactionRoleKey(targetGuildId, reactionRoleMessage.messageId)
+                    );
+
                     summary.removedMessages += 1;
                 }
-                logger.info(`Removed ${reactionRoleMessages.length} stale reaction role message(s) for unavailable guild ${targetGuildId}`);
+
+                logger.info(
+                    `${reactionRoleMessages.length} ancien(s) message(s) de rôles par réaction supprimé(s) pour le serveur indisponible ${targetGuildId}`
+                );
+
                 continue;
             }
 
@@ -463,20 +618,31 @@ export async function reconcileReactionRoleMessages(client, guildId = null) {
                         || await guild.channels.fetch(reactionRoleMessage.channelId).catch(() => null);
 
                     if (!channel || !channel.isTextBased?.()) {
-                        await client.db.delete(getReactionRoleKey(targetGuildId, reactionRoleMessage.messageId));
+                        await client.db.delete(
+                            getReactionRoleKey(targetGuildId, reactionRoleMessage.messageId)
+                        );
+
                         summary.removedMessages += 1;
                         continue;
                     }
 
-                    const message = await channel.messages.fetch(reactionRoleMessage.messageId).catch(() => null);
+                    const message = await channel.messages
+                        .fetch(reactionRoleMessage.messageId)
+                        .catch(() => null);
+
                     if (!message) {
-                        await client.db.delete(getReactionRoleKey(targetGuildId, reactionRoleMessage.messageId));
+                        await client.db.delete(
+                            getReactionRoleKey(targetGuildId, reactionRoleMessage.messageId)
+                        );
+
                         summary.removedMessages += 1;
                     }
+
                 } catch (messageCheckError) {
                     summary.errors += 1;
+
                     logger.warn(
-                        `Failed to validate reaction role message ${reactionRoleMessage.messageId} during reconciliation:`,
+                        `Impossible de vérifier le message de rôles par réaction ${reactionRoleMessage.messageId} lors de la réconciliation :`,
                         messageCheckError
                     );
                 }
@@ -484,13 +650,19 @@ export async function reconcileReactionRoleMessages(client, guildId = null) {
         }
 
         logger.info(
-            `Reaction role reconciliation complete: scanned ${summary.scannedMessages} message(s) across ${summary.scannedGuilds} guild(s), removed ${summary.removedMessages}, errors ${summary.errors}`
+            `Réconciliation des rôles par réaction terminée : ${summary.scannedMessages} message(s) vérifié(s) sur ${summary.scannedGuilds} serveur(s), ${summary.removedMessages} supprimé(s), ${summary.errors} erreur(s)`
         );
 
         return summary;
+
     } catch (error) {
-        logger.error('Unexpected error during reaction role reconciliation:', error);
+        logger.error(
+            'Erreur inattendue lors de la réconciliation des rôles par réaction :',
+            error
+        );
+
         summary.errors += 1;
+
         return summary;
     }
 }
