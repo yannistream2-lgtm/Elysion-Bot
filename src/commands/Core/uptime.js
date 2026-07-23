@@ -3,42 +3,52 @@ import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
-    .setName("uptime")
-    .setDescription("Check how long the bot has been online"),
+        .setName("uptime")
+        .setDescription("Vérifier depuis combien de temps le bot est en ligne"),
 
-  async execute(interaction) {
-    try {
-      await InteractionHelper.safeDefer(interaction);
-      
-      let totalSeconds = interaction.client.uptime / 1000;
-      let days = Math.floor(totalSeconds / 86400);
-      totalSeconds %= 86400;
-      let hours = Math.floor(totalSeconds / 3600);
-      totalSeconds %= 3600;
-      let minutes = Math.floor(totalSeconds / 60);
-      let seconds = Math.floor(totalSeconds % 60);
+    async execute(interaction) {
+        try {
+            await InteractionHelper.safeDefer(interaction);
 
-      const uptimeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            let totalSeconds = interaction.client.uptime / 1000;
+            let days = Math.floor(totalSeconds / 86400);
+            totalSeconds %= 86400;
+            let hours = Math.floor(totalSeconds / 3600);
+            totalSeconds %= 3600;
+            let minutes = Math.floor(totalSeconds / 60);
+            let seconds = Math.floor(totalSeconds % 60);
 
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [createEmbed({ 
-          title: "System Uptime", 
-          description: `\`\`\`${uptimeStr}\`\`\`` 
-        })],
-      });
-    } catch (error) {
-      logger.error('Uptime command error:', error);
-      
-      try {
-        return await InteractionHelper.safeEditReply(interaction, {
-          embeds: [createEmbed({ title: 'System Error', description: 'Could not compute uptime.', color: 'error' })],
-          flags: MessageFlags.Ephemeral,
-        });
-      } catch (replyError) {
-        logger.error('Failed to send error reply:', replyError);
-      }
-    }
-  },
+            const uptimeStr = `${days}j ${hours}h ${minutes}m ${seconds}s`;
+
+            await InteractionHelper.safeEditReply(interaction, {
+                embeds: [
+                    createEmbed({
+                        title: "Temps d'activité du système",
+                        description: `\`\`\`${uptimeStr}\`\`\``
+                    })
+                ],
+            });
+
+        } catch (error) {
+            logger.error('Erreur de la commande uptime :', error);
+
+            try {
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [
+                        createEmbed({
+                            title: 'Erreur système',
+                            description: 'Impossible de calculer le temps d’activité.',
+                            color: 'error'
+                        })
+                    ],
+                    flags: MessageFlags.Ephemeral,
+                });
+            } catch (replyError) {
+                logger.error('Échec de l’envoi de la réponse d’erreur :', replyError);
+            }
+        }
+    },
 };
