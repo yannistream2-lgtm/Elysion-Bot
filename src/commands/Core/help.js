@@ -1,3 +1,4 @@
+
 import {
     SlashCommandBuilder,
     ActionRowBuilder,
@@ -60,8 +61,8 @@ export async function createInitialHelpMenu(client) {
 
     const options = [
         {
-            label: "📋 All Commands",
-            description: "Browse every available command in a single list",
+            label: "📋 Toutes les commandes",
+            description: "Parcourir toutes les commandes disponibles dans une seule liste",
             value: ALL_COMMANDS_ID,
         },
         ...categoryDirs.map((category) => {
@@ -69,7 +70,7 @@ export async function createInitialHelpMenu(client) {
             const icon = CATEGORY_ICONS[categoryName] || "🔍";
             return {
                 label: `${icon} ${categoryName}`,
-                description: `View commands in the ${categoryName} category`,
+                description: `Voir les commandes de la catégorie ${categoryName}`,
                 value: category,
             };
         }),
@@ -77,54 +78,55 @@ export async function createInitialHelpMenu(client) {
 
     const botName = client?.user?.username || "Bot";
     const embed = createEmbed({
-        title: `📖 ${botName} Help`,
-        description: 'Set up your server, pick what to enable, then browse commands below.',
+        title: `📖 Aide de ${botName}`,
+        description: 'Configurez votre serveur, choisissez les fonctionnalités à activer, puis parcourez les commandes ci-dessous.',
         color: 'primary',
         thumbnail: client.user?.displayAvatarURL?.({ size: 1024 }),
         fields: [
             {
-                name: '🚀 Getting Started',
+                name: '🚀 Pour commencer',
                 value: [
-                    '**1. Launch setup** — Run `/configwizard` to configure prefix, mod role, and logs.',
-                    '**2. Enable systems** — Use `/commands dashboard` to turn categories on or off.',                    '**3. Browse commands** — Use the menu below to view categories and commands.',
+                    '**1. Lancez la configuration** — Utilisez `/configwizard` pour configurer le préfixe, le rôle de modération et les logs.',
+                    '**2. Activez les systèmes** — Utilisez `/commands dashboard` pour activer ou désactiver les catégories.',
+                    '**3. Parcourez les commandes** — Utilisez le menu ci-dessous pour consulter les catégories et les commandes.',
                 ].join('\n'),
                 inline: false,
             },
             {
-                name: 'ℹ️ How It Works',
+                name: 'ℹ️ Comment ça fonctionne',
                 value: [
-                    '• Dashboard commands manage each feature visually',
-                    '• Settings are saved per server',
-                    '• Slash commands and prefixes both work once enabled',
+                    '• Les commandes du tableau de bord permettent de gérer chaque fonctionnalité visuellement',
+                    '• Les paramètres sont enregistrés individuellement pour chaque serveur',
+                    '• Les commandes Slash et les commandes avec préfixe fonctionnent une fois activées',
                 ].join('\n'),
                 inline: false,
             },
             {
                 name: '\u200B',
-                value: `-# ${botName} is [open source](https://youtu.be/1jCZX8s3bJE?si=NPOYx-vxVE1I5vJK)`,
+                value: `-# ${botName} est [open source](https://youtu.be/1jCZX8s3bJE?si=NPOYx-vxVE1I5vJK)`,
                 inline: false,
             },
         ],
     });
 
-    embed.setFooter({ 
-        text: "Made with ❤️" 
+    embed.setFooter({
+        text: "Créé avec ❤️"
     });
     embed.setTimestamp();
 
     const bugReportButton = new ButtonBuilder()
         .setCustomId(BUG_REPORT_BUTTON_ID)
-        .setLabel("Report Bug")
+        .setLabel("Signaler un bug")
         .setStyle(ButtonStyle.Danger);
 
     const supportButton = new ButtonBuilder()
-        .setLabel("Support Server")
+        .setLabel("Serveur de support")
         .setURL("https://discord.gg/QnWNz2dKCE")
         .setStyle(ButtonStyle.Link);
 
     const selectRow = createSelectMenu(
         CATEGORY_SELECT_ID,
-        "Select to view the commands",
+        "Sélectionnez une catégorie pour voir les commandes",
         options,
     );
 
@@ -143,13 +145,13 @@ export default {
     slashOnly: true,
     data: new SlashCommandBuilder()
         .setName("help")
-        .setDescription("Displays the help menu with all available commands"),
+        .setDescription("Affiche le menu d'aide avec toutes les commandes disponibles"),
 
     async execute(interaction, guildConfig, client) {
-        
+
         const { MessageFlags } = await import('discord.js');
         await InteractionHelper.safeDefer(interaction);
-        
+
         const { embeds, components } = await createInitialHelpMenu(client);
 
         await InteractionHelper.safeEditReply(interaction, {
@@ -164,8 +166,8 @@ export default {
                 }
 
                 const closedEmbed = createEmbed({
-                    title: "Help menu closed",
-                    description: "Help menu has been closed, use /help again.",
+                    title: "Menu d'aide fermé",
+                    description: "Le menu d'aide a été fermé. Utilisez à nouveau `/help` pour l'ouvrir.",
                     color: "secondary",
                 });
 
@@ -174,8 +176,9 @@ export default {
                     components: [],
                 });
             } catch (error) {
-                logger.debug('Help menu close edit failed (interaction may have expired):', error?.message);
+                logger.debug('Échec de la fermeture du menu d\'aide (l\'interaction a peut-être expiré) :', error?.message);
             }
         }, HELP_MENU_TIMEOUT_MS);
     },
 };
+```
