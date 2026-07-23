@@ -1,3 +1,4 @@
+
 import { logger } from '../../utils/logger.js';
 import { getLevelingConfig, getUserLevelData, saveLevelingConfig } from './leveling.js';
 
@@ -29,7 +30,7 @@ async function tryAwardRole(member, roleId, level) {
     const role = member.guild.roles.cache.get(roleId) || (await member.guild.roles.fetch(roleId).catch(() => null));
     if (!role || member.roles.cache.has(roleId)) return false;
 
-    await member.roles.add(role, `Level ${level} reward (startup sync)`);
+    await member.roles.add(role, `Récompense du niveau ${level} (synchronisation au démarrage)`);
     return true;
 }
 
@@ -60,12 +61,14 @@ export async function reconcileLevelRoles(client, guildId = null) {
             for (const [level, roleId] of Object.entries(rewards)) {
                 const role =
                     guild.roles.cache.get(roleId) || (await guild.roles.fetch(roleId).catch(() => null));
+
                 if (!role) {
                     delete rewards[level];
                     configChanged = true;
                     summary.prunedRewardEntries += 1;
+
                     logger.warn(
-                        `Removed missing level ${level} reward role ${roleId} from config in guild ${guild.id}`,
+                        `Rôle de récompense du niveau ${level} (${roleId}) introuvable. Suppression de la configuration dans le serveur ${guild.id}.`,
                     );
                 }
             }
@@ -90,11 +93,15 @@ export async function reconcileLevelRoles(client, guildId = null) {
 
                     try {
                         const awarded = await tryAwardRole(member, roleId, requiredLevel);
-                        if (awarded) summary.rolesReAwarded += 1;
+
+                        if (awarded) {
+                            summary.rolesReAwarded += 1;
+                        }
                     } catch (awardError) {
                         summary.errors += 1;
+
                         logger.warn(
-                            `Could not re-award level ${requiredLevel} role to ${userId} in guild ${guild.id}:`,
+                            `Impossible de réattribuer le rôle du niveau ${requiredLevel} à l'utilisateur ${userId} dans le serveur ${guild.id} :`,
                             awardError.message,
                         );
                     }
@@ -102,9 +109,14 @@ export async function reconcileLevelRoles(client, guildId = null) {
             }
         } catch (error) {
             summary.errors += 1;
-            logger.warn(`Level role sync failed for guild ${guild.id}:`, error.message);
+
+            logger.warn(
+                `Échec de la synchronisation des rôles de niveau pour le serveur ${guild.id} :`,
+                error.message,
+            );
         }
     }
 
     return summary;
 }
+```
