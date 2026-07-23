@@ -8,8 +8,8 @@ import { Mutex } from '../../utils/mutex.js';
 import { wrapServiceBoundary } from '../../utils/errorHandler.js';
 
 /**
- * Award XP to a member. Returns null when XP is skipped (disabled/invalid amount).
- * Throws on storage or unexpected failures.
+ * Ajoute de l'XP à un membre. Retourne null lorsque l'XP est ignorée (désactivée/montant invalide).
+ * Génère une erreur en cas de problème de stockage ou d'erreur inattendue.
  */
 export const addXp = wrapServiceBoundary(async function addXp(client, guild, member, xpToAdd) {
   const lockKey = `leveling:${guild.id}:${member.user.id}`;
@@ -40,7 +40,7 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
       didLevelUp = true;
       xpNeededForNextLevel = getXpForLevel(levelData.level);
 
-      logger.info(`🎉 ${member.user.tag} leveled up to level ${levelData.level} in ${guild.name}`);
+      logger.info(`🎉 ${member.user.tag} est passé au niveau ${levelData.level} sur ${guild.name}`);
 
       if (config.roleRewards && config.roleRewards[levelData.level]) {
         await awardRoleReward(guild, member, config.roleRewards[levelData.level], levelData.level);
@@ -58,18 +58,18 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
           guildId: guild.id,
           eventType: EVENT_TYPES.LEVELING_LEVELUP,
           data: {
-            title: 'Level Up',
+            title: 'Montée de niveau',
             lines: [
-              formatLogLine('Member', `${member.user.tag} (\`${member.user.id}\`)`),
-              formatLogLine('New Level', levelData.level.toString()),
-              formatLogLine('Levels Gained', (levelData.level - initialLevel).toString()),
-              formatLogLine('Total XP', levelData.totalXp.toString()),
+              formatLogLine('Membre', `${member.user.tag} (\`${member.user.id}\`)`),
+              formatLogLine('Nouveau niveau', levelData.level.toString()),
+              formatLogLine('Niveaux gagnés', (levelData.level - initialLevel).toString()),
+              formatLogLine('XP totale', levelData.totalXp.toString()),
             ],
             userId: member.user.id,
           },
         });
       } catch (logError) {
-        logger.debug('Failed to log leveling event:', logError.message);
+        logger.debug('Impossible d\'enregistrer l\'événement de niveau :', logError.message);
       }
     }
 
@@ -86,7 +86,7 @@ export const addXp = wrapServiceBoundary(async function addXp(client, guild, mem
 }, {
   service: 'xpSystem',
   operation: 'addXp',
-  userMessage: 'Failed to award XP. Please try again.',
+  userMessage: 'Impossible d\'attribuer l\'XP. Veuillez réessayer.',
 });
 
 async function awardRoleReward(guild, member, roleId, level) {
@@ -94,7 +94,7 @@ async function awardRoleReward(guild, member, roleId, level) {
     const role = guild.roles.cache.get(roleId);
 
     if (!role) {
-      logger.warn(`Role ${roleId} not found for level ${level} reward in guild ${guild.id}`);
+      logger.warn(`Le rôle ${roleId} est introuvable pour la récompense du niveau ${level} sur le serveur ${guild.id}`);
       return;
     }
 
@@ -102,10 +102,10 @@ async function awardRoleReward(guild, member, roleId, level) {
       return;
     }
 
-    await member.roles.add(role, `Level ${level} reward`);
-    logger.info(`✅ Awarded role ${role.name} to ${member.user.tag} for reaching level ${level}`);
+    await member.roles.add(role, `Récompense du niveau ${level}`);
+    logger.info(`✅ Rôle ${role.name} attribué à ${member.user.tag} pour avoir atteint le niveau ${level}`);
   } catch (error) {
-    logger.error(`Failed to award role reward to ${member.user.id}:`, error);
+    logger.error(`Impossible d'attribuer la récompense de rôle à ${member.user.id} :`, error);
   }
 }
 
@@ -121,7 +121,7 @@ async function sendLevelUpAnnouncement(guild, member, levelData, config) {
 
     const permissions = levelUpChannel.permissionsFor(guild.members.me);
     if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
-      logger.warn(`Missing permissions to send levelup message in ${levelUpChannel.id}`);
+      logger.warn(`Permissions insuffisantes pour envoyer le message de montée de niveau dans ${levelUpChannel.id}`);
       return;
     }
 
@@ -132,9 +132,9 @@ async function sendLevelUpAnnouncement(guild, member, levelData, config) {
       .replace(/{xpNeeded}/g, getXpForLevel(levelData.level + 1));
 
     await levelUpChannel.send(message).catch(error => {
-      logger.error(`Failed to send level up message in channel ${levelUpChannel.id}:`, error);
+      logger.error(`Impossible d'envoyer le message de montée de niveau dans le salon ${levelUpChannel.id} :`, error);
     });
   } catch (error) {
-    logger.error('Error sending level up announcement:', error);
+    logger.error('Erreur lors de l\'envoi de l\'annonce de montée de niveau :', error);
   }
 }
