@@ -1,3 +1,4 @@
+
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { createEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
@@ -6,37 +7,45 @@ import { ModerationService } from '../../services/moderation/moderationService.j
 import { TitanBotError, replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("massban")
-        .setDescription("Ban multiple users from the server at once")
+        .setDescription("Bannir plusieurs utilisateurs du serveur en une seule fois")
         .addStringOption(option =>
             option
                 .setName("users")
-                .setDescription("User IDs or mentions to ban (separated by spaces or commas)")
+                .setDescription("IDs ou mentions des utilisateurs à bannir (séparés par des espaces ou des virgules)")
                 .setRequired(true)
         )
         .addStringOption(option =>
-            option.setName("reason")
-                .setDescription("Reason for the mass ban")
+            option
+                .setName("reason")
+                .setDescription("Raison du bannissement massif")
                 .setRequired(false)
         )
         .addIntegerOption(option =>
             option
                 .setName("delete_days")
-                .setDescription("Number of days of messages to delete (0-7)")
+                .setDescription("Nombre de jours de messages à supprimer (0 à 7)")
                 .setMinValue(0)
                 .setMaxValue(7)
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+
     category: "moderation",
-    abuseProtection: { maxAttempts: 3, windowMs: 60_000 },
+
+    abuseProtection: {
+        maxAttempts: 3,
+        windowMs: 60_000
+    },
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
-            logger.warn(`Massban interaction defer failed`, {
+            logger.warn(`Échec du report de l'interaction massban`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 commandName: 'massban'
@@ -45,26 +54,38 @@ export default {
         }
 
         const usersInput = interaction.options.getString("users");
-        const reason = interaction.options.getString("reason") || "Mass ban - No reason provided";
+        const reason = interaction.options.getString("reason") || "Bannissement massif - Aucune raison fournie";
         const deleteDays = interaction.options.getInteger("delete_days") || 0;
 
         try {
+            // Récupérer et nettoyer les IDs utilisateurs
             const userIds = usersInput
-.replace(/<@!?(\d+)>/g, '$1')
-.split(/[\s,]+/)
-.filter(id => id && /^\d+$/.test(id))
-.slice(0, 20);
+                .replace(/<@!?(\d+)>/g, '$1')
+                .split(/[\s,]+/)
+                .filter(id => id && /^\d+$/.test(id))
+                .slice(0, 20);
 
             if (userIds.length === 0) {
-                return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Please provide valid user IDs or mentions. Maximum 20 users at once.' });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: 'Veuillez fournir des IDs utilisateurs ou des mentions valides. Maximum 20 utilisateurs à la fois.'
+                });
             }
 
+            // Empêcher le bannissement de soi-même
             if (userIds.includes(interaction.user.id)) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You cannot include yourself in a mass ban.' });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.UNKNOWN,
+                    message: 'Vous ne pouvez pas vous inclure dans un bannissement massif.'
+                });
             }
 
+            // Empêcher le bannissement du bot
             if (userIds.includes(client.user.id)) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You cannot include the bot in a mass ban.' });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.UNKNOWN,
+                    message: 'Vous ne pouvez pas inclure le bot dans un bannissement massif.'
+                });
             }
 
             const results = {
@@ -73,39 +94,61 @@ export default {
                 skipped: []
             };
 
+            // Traiter chaque utilisateur
             for (const userId of userIds) {
                 try {
                     const user = await client.users.fetch(userId).catch(() => null);
-                    
+
                     if (!user) {
-                        results.failed.push({ userId, reason: "User not found" });
+                        results.failed.push({
+                            userId,
+                            reason: "Utilisateur introuvable"
+                        });
                         continue;
                     }
 
                     const member = await interaction.guild.members.fetch(userId).catch(() => null);
-                    
+
                     if (member) {
-                        const modCheck = ModerationService.validateHierarchy(interaction.member, member, 'ban');
+                        // Vérifier la hiérarchie entre le modérateur et la cible
+                        const modCheck = ModerationService.validateHierarchy(
+                            interaction.member,
+                            member,
+                            'ban'
+                        );
+
                         if (!modCheck.valid) {
                             results.skipped.push({
                                 user: user.tag,
                                 userId,
-                                reason: ModerationService.buildHierarchySkipReason(interaction.member, member, 'ban'),
+                                reason: ModerationService.buildHierarchySkipReason(
+                                    interaction.member,
+                                    member,
+                                    'ban'
+                                ),
                             });
                             continue;
                         }
 
+                        // Vérifier la hiérarchie entre le bot et la cible
                         const botCheck = ModerationService.validateBotHierarchy(member, 'ban');
+
                         if (!botCheck.valid) {
                             results.skipped.push({
                                 user: user.tag,
                                 userId,
-                                reason: ModerationService.buildHierarchySkipReason(interaction.member, member, 'ban', 'bot'),
+                                reason: ModerationService.buildHierarchySkipReason(
+                                    interaction.member,
+                                    member,
+                                    'ban',
+                                    'bot'
+                                ),
                             });
                             continue;
                         }
                     }
 
+                    // Bannir l'utilisateur
                     await interaction.guild.members.ban(userId, {
                         reason: reason,
                         deleteMessageSeconds: deleteDays * 24 * 60 * 60
@@ -116,14 +159,15 @@ export default {
                         userId
                     });
 
+                    // Enregistrer le bannissement dans les logs
                     await logModerationAction({
                         client,
                         guild: interaction.guild,
                         event: {
-                            action: "Member Banned",
+                            action: "Membre banni",
                             target: `${user.tag} (${user.id})`,
                             executor: `${interaction.user.tag} (${interaction.user.id})`,
-                            reason: `${reason} (Mass Ban)`,
+                            reason: `${reason} (Bannissement massif)`,
                             metadata: {
                                 userId: user.id,
                                 moderatorId: interaction.user.id,
@@ -134,56 +178,72 @@ export default {
                     });
 
                 } catch (error) {
-                    logger.error(`Failed to ban user ${userId}:`, error);
-                    const reason = error instanceof TitanBotError
+                    logger.error(`Échec du bannissement de l'utilisateur ${userId}:`, error);
+
+                    const errorReason = error instanceof TitanBotError
                         ? (error.userMessage || error.message)
-                        : (error.message || "Unknown error");
-                    results.failed.push({ 
-                        userId, 
-                        reason,
+                        : (error.message || "Erreur inconnue");
+
+                    results.failed.push({
+                        userId,
+                        reason: errorReason,
                     });
                 }
             }
 
-            let description = `**Mass Ban Results:**\n\n`;
-            
+            // Construire le résultat final
+            let description = `**Résultats du bannissement massif :**\n\n`;
+
             if (results.successful.length > 0) {
-                description += `✅ **Successfully Banned (${results.successful.length}):**\n`;
+                description += `✅ **Bannissements réussis (${results.successful.length}) :**\n`;
+
                 results.successful.forEach(result => {
                     description += `• ${result.user} (${result.userId})\n`;
                 });
+
                 description += '\n';
             }
 
             if (results.skipped.length > 0) {
-                description += `⚠️ **Skipped (${results.skipped.length}):**\n`;
+                description += `⚠️ **Utilisateurs ignorés (${results.skipped.length}) :**\n`;
+
                 results.skipped.forEach(result => {
                     description += `• ${result.user} - ${result.reason}\n`;
                 });
+
                 description += '\n';
             }
 
             if (results.failed.length > 0) {
-                description += `❌ **Failed (${results.failed.length}):**\n`;
+                description += `❌ **Échecs (${results.failed.length}) :**\n`;
+
                 results.failed.forEach(result => {
                     description += `• ${result.userId} - ${result.reason}\n`;
                 });
             }
 
-            const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
-            
+            const embed = results.successful.length > 0
+                ? successEmbed
+                : warningEmbed;
+
+            // Afficher les résultats
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     embed(
-                        `🔨 Mass Ban Completed`,
+                        `🔨 Bannissement massif terminé`,
                         description
                     )
                 ]
             });
 
         } catch (error) {
-            logger.error("Error in massban command:", error);
-            return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'An error occurred while processing the mass ban. Please try again later.' });
+            logger.error("Erreur dans la commande massban :", error);
+
+            return await replyUserError(interaction, {
+                type: ErrorTypes.UNKNOWN,
+                message: 'Une erreur est survenue lors du traitement du bannissement massif. Veuillez réessayer plus tard.'
+            });
         }
     }
 };
+```
