@@ -4,17 +4,19 @@ import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
-    data: new SlashCommandBuilder()
+  data: new SlashCommandBuilder()
     .setName("roll")
-    .setDescription("Rolls dice using standard notation (e.g., 2d20, 1d6 + 5).")
+    .setDescription("Lance des dés avec la notation standard (ex. 2d20, 1d6 + 5).")
     .addStringOption((option) =>
       option
         .setName("notation")
-        .setDescription("The dice notation (e.g., 2d6, 1d20 + 4)")
+        .setDescription("La notation des dés (ex. 2d6, 1d20 + 4)")
         .setRequired(true)
         .setMaxLength(50),
     ),
+
   category: 'Fun',
 
   async execute(interaction, config, client) {
@@ -29,9 +31,9 @@ export default {
 
     if (!match) {
       throw new TitanBotError(
-        `Invalid dice notation: ${notation}`,
+        `Notation de dés invalide : ${notation}`,
         ErrorTypes.USER_INPUT,
-        'Invalid notation. Use format like `1d20` or `3d6+5`.'
+        'Notation invalide. Utilisez un format comme `1d20` ou `3d6+5`.',
       );
     }
 
@@ -41,25 +43,26 @@ export default {
 
     if (numDice < 1 || numDice > 20) {
       throw new TitanBotError(
-        `Too many dice requested: ${numDice}`,
+        `Trop de dés demandés : ${numDice}`,
         ErrorTypes.VALIDATION,
-        'Please keep the number of dice between 1 and 20.'
+        'Veuillez utiliser entre 1 et 20 dés.',
       );
     }
 
     if (numSides < 1 || numSides > 1000) {
       throw new TitanBotError(
-        `Invalid number of sides: ${numSides}`,
+        `Nombre de faces invalide : ${numSides}`,
         ErrorTypes.VALIDATION,
-        'Please keep the number of sides between 1 and 1000.'
+        'Veuillez utiliser un dé ayant entre 1 et 1000 faces.',
       );
     }
 
-    let rolls = [];
+    const rolls = [];
     let totalRoll = 0;
 
     for (let i = 0; i < numDice; i++) {
       const roll = Math.floor(Math.random() * numSides) + 1;
+
       rolls.push(roll);
       totalRoll += roll;
     }
@@ -67,15 +70,26 @@ export default {
     const finalTotal = totalRoll + modifier;
 
     const resultsDetail =
-      numDice > 1 ? `**Rolls:** ${rolls.join(" + ")}\n` : "";
-    const modifierText = modifier !== 0 ? `+ (${modifier})` : "";
+      numDice > 1
+        ? `**Résultats des dés :** ${rolls.join(" + ")}\n`
+        : "";
+
+    const modifierText =
+      modifier !== 0
+        ? `+ (${modifier})`
+        : "";
 
     const embed = successEmbed(
-      `🎲 Rolling ${numDice}d${numSides}${modifier !== 0 ? match[3] : ""}`,
-      `${resultsDetail}**Total Roll:** ${totalRoll}${modifierText} = **${finalTotal}**`,
+      `🎲 Lancer de ${numDice}d${numSides}${modifier !== 0 ? match[3] : ""}`,
+      `${resultsDetail}**Total des dés :** ${totalRoll}${modifierText} = **${finalTotal}**`,
     );
 
-    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-    logger.debug(`Roll command executed by user ${interaction.user.id} with notation ${notation} in guild ${interaction.guildId}`);
+    await InteractionHelper.safeEditReply(interaction, {
+      embeds: [embed],
+    });
+
+    logger.debug(
+      `Commande roll exécutée par l'utilisateur ${interaction.user.id} avec la notation ${notation} sur le serveur ${interaction.guildId}`,
+    );
   },
 };
