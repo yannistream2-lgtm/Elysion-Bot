@@ -18,34 +18,67 @@ export default {
         
         const config = await getGuildConfig(member.client, guild.id);
         
-        const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
+        const welcomeConfig = await getWelcomeConfig(
+            member.client,
+            guild.id
+        );
         
         const welcomeChannelId = welcomeConfig?.channelId;
 
         if (welcomeConfig?.enabled && welcomeChannelId) {
             const channel = guild.channels.cache.get(welcomeChannelId);
             const me = guild.members.me;
-            const permissions = channel?.isTextBased?.() && me ? channel.permissionsFor(me) : null;
-            // Skip only the welcome message if permissions are missing; the rest of the
-            // join pipeline (auto-role, verification, logging, counters) must still run.
-            if (permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
-                const formatData = { user, guild, member };
+
+            const permissions =
+                channel?.isTextBased?.() && me
+                    ? channel.permissionsFor(me)
+                    : null;
+
+            // Ignorer uniquement le message de bienvenue si les permissions
+            // sont insuffisantes. Le reste du processus d'arrivée
+            // (rôle automatique, vérification, logs, compteurs) doit continuer.
+            if (
+                permissions?.has([
+                    PermissionFlagsBits.ViewChannel,
+                    PermissionFlagsBits.SendMessages
+                ])
+            ) {
+                const formatData = {
+                    user,
+                    guild,
+                    member
+                };
+
                 const welcomeMessage = formatWelcomeMessage(
-                    welcomeConfig.welcomeMessage || welcomeConfig.welcomeEmbed?.description || botConfig.welcome?.defaultWelcomeMessage || 'Welcome {user} to {server}!',
+                    welcomeConfig.welcomeMessage ||
+                    welcomeConfig.welcomeEmbed?.description ||
+                    botConfig.welcome?.defaultWelcomeMessage ||
+                    'Bienvenue {user} sur {server} !',
                     formatData
                 );
 
-                const messageContent = welcomeConfig.welcomePing ? user.toString() : null;
+                const messageContent =
+                    welcomeConfig.welcomePing
+                        ? user.toString()
+                        : null;
 
                 const embedTitle = formatWelcomeMessage(
-                    welcomeConfig.welcomeEmbed?.title || '🎉 Welcome!',
+                    welcomeConfig.welcomeEmbed?.title ||
+                    '🎉 Bienvenue !',
                     formatData
                 );
-                const embedFooter = welcomeConfig.welcomeEmbed?.footer
-                    ? formatWelcomeMessage(welcomeConfig.welcomeEmbed.footer, formatData)
-                    : `Welcome to ${guild.name}!`;
 
-                const canEmbed = permissions.has(PermissionFlagsBits.EmbedLinks);
+                const embedFooter =
+                    welcomeConfig.welcomeEmbed?.footer
+                        ? formatWelcomeMessage(
+                            welcomeConfig.welcomeEmbed.footer,
+                            formatData
+                        )
+                        : `Bienvenue sur ${guild.name} !`;
+
+                const canEmbed = permissions.has(
+                    PermissionFlagsBits.EmbedLinks
+                );
 
                 if (!canEmbed) {
                     await channel.send({
@@ -53,146 +86,280 @@ export default {
                     });
                 } else {
                     const embed = new EmbedBuilder()
-                        .setColor(welcomeConfig.welcomeEmbed?.color || getColor('success'))
+                        .setColor(
+                            welcomeConfig.welcomeEmbed?.color ||
+                            getColor('success')
+                        )
                         .setTitle(embedTitle)
                         .setDescription(welcomeMessage)
                         .setThumbnail(user.displayAvatarURL())
                         .addFields(
-                            { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-                            { name: 'Member Count', value: guild.memberCount.toString(), inline: true }
+                            {
+                                name: 'Utilisateur',
+                                value: `${user.tag} (${user.id})`,
+                                inline: true
+                            },
+                            {
+                                name: 'Nombre de membres',
+                                value: guild.memberCount.toString(),
+                                inline: true
+                            }
                         )
                         .setTimestamp()
-                        .setFooter({ text: embedFooter });
+                        .setFooter({
+                            text: embedFooter
+                        });
                     
                     if (welcomeConfig.welcomeImage) {
-                        embed.setImage(welcomeConfig.welcomeImage);
-                    } else if (welcomeConfig.welcomeEmbed?.image?.url) {
-                        embed.setImage(welcomeConfig.welcomeEmbed.image.url);
+                        embed.setImage(
+                            welcomeConfig.welcomeImage
+                        );
+                    } else if (
+                        welcomeConfig.welcomeEmbed?.image?.url
+                    ) {
+                        embed.setImage(
+                            welcomeConfig.welcomeEmbed.image.url
+                        );
                     }
                     
-                    await channel.send({ 
+                    await channel.send({
                         content: messageContent,
-                        embeds: [embed] 
+                        embeds: [embed]
                     });
                 }
             }
         }
         
-        if (welcomeConfig?.roleIds && welcomeConfig.roleIds.length > 0) {
-            const delay = welcomeConfig.autoRoleDelay || 0;
-            const singleRoleId = welcomeConfig.roleIds[0];
+        // Attribution automatique des rôles.
+        if (
+            welcomeConfig?.roleIds &&
+            welcomeConfig.roleIds.length > 0
+        ) {
+            const delay =
+                welcomeConfig.autoRoleDelay || 0;
+
+            const singleRoleId =
+                welcomeConfig.roleIds[0];
             
             if (delay > 0) {
-                const timeout = setTimeout(async () => {
-                    const role = guild.roles.cache.get(singleRoleId);
-                    if (role) {
-                        await assignRoleSafely(member, role);
-                    }
-                }, delay * 1000);
+                const timeout = setTimeout(
+                    async () => {
+                        const role =
+                            guild.roles.cache.get(
+                                singleRoleId
+                            );
+
+                        if (role) {
+                            await assignRoleSafely(
+                                member,
+                                role
+                            );
+                        }
+                    },
+                    delay * 1000
+                );
+
                 if (typeof timeout.unref === 'function') {
                     timeout.unref();
                 }
             } else {
-                const role = guild.roles.cache.get(singleRoleId);
+                const role =
+                    guild.roles.cache.get(
+                        singleRoleId
+                    );
+
                 if (role) {
-                    await assignRoleSafely(member, role);
+                    await assignRoleSafely(
+                        member,
+                        role
+                    );
                 }
             }
         }
         
-        if (config?.verification?.enabled || config?.verification?.autoVerify?.enabled) {
-            await handleVerification(member, guild, config.verification, member.client);
+        // Gestion de la vérification automatique.
+        if (
+            config?.verification?.enabled ||
+            config?.verification?.autoVerify?.enabled
+        ) {
+            await handleVerification(
+                member,
+                guild,
+                config.verification,
+                member.client
+            );
         }
 
+        // Enregistrement de l'arrivée du membre dans les logs.
         try {
             await logEvent({
                 client: member.client,
                 guildId: guild.id,
                 eventType: EVENT_TYPES.MEMBER_JOIN,
                 data: {
-                    title: 'User joined',
+                    title: 'Un utilisateur a rejoint le serveur',
                     lines: [
-                        `**User:** ${user.toString()} (${user.displayName !== user.username ? `@${user.displayName}` : user.tag})`,
-                        `**ID:** \`${user.id}\``,
-                        `**Created:** <t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
-                        `**Members:** ${guild.memberCount}`,
+                        `**Utilisateur :** ${user.toString()} (${user.displayName !== user.username ? `@${user.displayName}` : user.tag})`,
+                        `**ID :** \`${user.id}\``,
+                        `**Compte créé :** <t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
+                        `**Membres :** ${guild.memberCount}`,
                     ],
                     quoted: false,
-                    thumbnail: user.displayAvatarURL({ dynamic: true }),
+                    thumbnail: user.displayAvatarURL({
+                        dynamic: true
+                    }),
                     userId: user.id,
                 }
             });
         } catch (error) {
-            logger.debug('Error logging member join:', error);
+            logger.debug(
+                "Erreur lors de l'enregistrement de l'arrivée du membre :",
+                error
+            );
         }
 
+        // Mise à jour des compteurs du serveur.
         try {
-            const counters = await getServerCounters(member.client, guild.id);
+            const counters = await getServerCounters(
+                member.client,
+                guild.id
+            );
+
             for (const counter of counters) {
-                if (counter && counter.type && counter.channelId && counter.enabled !== false) {
-                    await updateCounter(member.client, guild, counter);
+                if (
+                    counter &&
+                    counter.type &&
+                    counter.channelId &&
+                    counter.enabled !== false
+                ) {
+                    await updateCounter(
+                        member.client,
+                        guild,
+                        counter
+                    );
                 }
             }
         } catch (error) {
-            logger.debug('Error updating counters on member join:', error);
+            logger.debug(
+                "Erreur lors de la mise à jour des compteurs après l'arrivée d'un membre :",
+                error
+            );
         }
 
+        // Restaurer l'anniversaire d'un membre qui revient sur le serveur.
         try {
-            const backupKey = `guild:${guild.id}:birthdays:left`;
-            const backup = (await member.client.db.get(backupKey)) || {};
+            const backupKey =
+                `guild:${guild.id}:birthdays:left`;
+
+            const backup =
+                (await member.client.db.get(backupKey)) || {};
+
             if (backup[user.id]) {
-                const { month, day } = backup[user.id];
-                await dbSetBirthday(member.client, guild.id, user.id, month, day);
+                const {
+                    month,
+                    day
+                } = backup[user.id];
+
+                await dbSetBirthday(
+                    member.client,
+                    guild.id,
+                    user.id,
+                    month,
+                    day
+                );
+
                 delete backup[user.id];
-                await member.client.db.set(backupKey, backup);
-                logger.debug(`Birthday restored for user ${user.id} in guild ${guild.id}`);
+
+                await member.client.db.set(
+                    backupKey,
+                    backup
+                );
+
+                logger.debug(
+                    `Anniversaire restauré pour l'utilisateur ${user.id} sur le serveur ${guild.id}`
+                );
             }
         } catch (error) {
-            logger.debug('Error restoring birthday on member join:', error);
+            logger.debug(
+                "Erreur lors de la restauration de l'anniversaire après l'arrivée du membre :",
+                error
+            );
         }
         
     } catch (error) {
-        logger.error('Error in guildMemberAdd event:', error);
+        logger.error(
+            "Erreur lors de l'événement d'arrivée d'un membre :",
+            error
+        );
     }
   }
 };
 
-async function handleVerification(member, guild, verificationConfig, client) {
-    const { autoVerifyOnJoin } = await import('../services/verificationService.js');
+async function handleVerification(
+    member,
+    guild,
+    verificationConfig,
+    client
+) {
+    const {
+        autoVerifyOnJoin
+    } = await import(
+        '../services/verificationService.js'
+    );
     
     try {
-        const result = await autoVerifyOnJoin(client, guild, member, verificationConfig);
+        const result = await autoVerifyOnJoin(
+            client,
+            guild,
+            member,
+            verificationConfig
+        );
         
         if (result.autoVerified) {
-            logger.info('User auto-verified on join', {
-                guildId: guild.id,
-                userId: member.id,
-                userTag: member.user.tag,
-                roleName: result.roleName,
-                criteria: result.criteria
-            });
+            logger.info(
+                "Utilisateur vérifié automatiquement à son arrivée",
+                {
+                    guildId: guild.id,
+                    userId: member.id,
+                    userTag: member.user.tag,
+                    roleName: result.roleName,
+                    criteria: result.criteria
+                }
+            );
         } else {
-            logger.debug('User not auto-verified on join', {
-                guildId: guild.id,
-                userId: member.id,
-                reason: result.reason
-            });
+            logger.debug(
+                "Utilisateur non vérifié automatiquement à son arrivée",
+                {
+                    guildId: guild.id,
+                    userId: member.id,
+                    reason: result.reason
+                }
+            );
         }
 
     } catch (error) {
-        logger.error('Error in auto-verification for member', {
-            guildId: guild.id,
-            userId: member.id,
-            userTag: member.user.tag,
-            error: error.message
-        });
+        logger.error(
+            "Erreur lors de la vérification automatique du membre",
+            {
+                guildId: guild.id,
+                userId: member.id,
+                userTag: member.user.tag,
+                error: error.message
+            }
+        );
     }
 }
 
-async function assignRoleSafely(member, role) {
+async function assignRoleSafely(
+    member,
+    role
+) {
     try {
         await member.roles.add(role);
     } catch (error) {
-        logger.warn(`Failed to assign role ${role.id} to member ${member.id}:`, error);
+        logger.warn(
+            `Impossible d'attribuer le rôle ${role.id} au membre ${member.id} :`,
+            error
+        );
     }
 }
