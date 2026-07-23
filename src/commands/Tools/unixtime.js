@@ -3,10 +3,11 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName('unixtime')
-        .setDescription('Get the current Unix timestamp'),
+        .setDescription('Obtenir l’horodatage Unix actuel'),
 
     async execute(interaction) {
         await InteractionHelper.safeExecute(
@@ -16,22 +17,25 @@ export default {
                 const unixTimestamp = Math.floor(now.getTime() / 1000);
 
                 const embed = successEmbed(
-                    '⏱️ Current Unix Timestamp',
-                    `**Seconds since Unix Epoch:** \`${unixTimestamp}\`\n` +
-                    `**Milliseconds since Unix Epoch:** \`${now.getTime()}\`\n\n` +
-                    `**Human-readable (UTC):** ${now.toUTCString()}\n` +
-                    `**ISO String:** ${now.toISOString()}`
+                    '⏱️ Horodatage Unix actuel',
+                    `**Secondes depuis l’époque Unix :** \`${unixTimestamp}\`\n` +
+                    `**Millisecondes depuis l’époque Unix :** \`${now.getTime()}\`\n\n` +
+                    `**Date lisible (UTC) :** ${now.toUTCString()}\n` +
+                    `**Chaîne ISO :** ${now.toISOString()}`
                 );
+
                 embed.setColor(getColor('success'));
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],
                 });
             },
-            'Failed to get unix timestamp. Please try again.',
+            'Impossible d’obtenir l’horodatage Unix. Veuillez réessayer.',
             {
                 autoDefer: true,
-                deferOptions: { flags: MessageFlags.Ephemeral }
+                deferOptions: {
+                    flags: MessageFlags.Ephemeral
+                }
             }
         );
     },
