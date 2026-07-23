@@ -1,4 +1,4 @@
-```js
+
 import { getColor } from '../../../config/bot.js';
 import { PermissionFlagsBits } from 'discord.js';
 import { createEmbed } from '../../../utils/embeds.js';
