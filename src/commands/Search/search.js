@@ -8,33 +8,42 @@ import searchUrban from './modules/search_urban.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('search')
-        .setDescription('Search the web and dictionaries')
+        .setDescription('Rechercher sur le Web et dans des dictionnaires')
+
         .addSubcommand(subcommand =>
             subcommand
                 .setName('define')
-                .setDescription('Look up a word definition')
+                .setDescription('Rechercher la définition d’un mot')
                 .addStringOption(option =>
-                    option.setName('word')
-                        .setDescription('The word to look up')
-                        .setRequired(true))
+                    option
+                        .setName('word')
+                        .setDescription('Le mot dont vous souhaitez connaître la définition')
+                        .setRequired(true)
+                )
         )
+
         .addSubcommand(subcommand =>
             subcommand
                 .setName('google')
-                .setDescription('Search Google')
+                .setDescription('Effectuer une recherche sur Google')
                 .addStringOption(option =>
-                    option.setName('query')
-                        .setDescription('What would you like to search for?')
-                        .setRequired(true))
+                    option
+                        .setName('query')
+                        .setDescription('Que souhaitez-vous rechercher ?')
+                        .setRequired(true)
+                )
         )
+
         .addSubcommand(subcommand =>
             subcommand
                 .setName('urban')
-                .setDescription('Search Urban Dictionary for definitions')
+                .setDescription('Rechercher une définition sur Urban Dictionary')
                 .addStringOption(option =>
-                    option.setName('term')
-                        .setDescription('The term to look up on Urban Dictionary')
-                        .setRequired(true))
+                    option
+                        .setName('term')
+                        .setDescription('Le terme à rechercher sur Urban Dictionary')
+                        .setRequired(true)
+                )
         ),
 
     async execute(interaction, config, client) {
@@ -43,12 +52,18 @@ export default {
         switch (subcommand) {
             case 'define':
                 return await searchDefine.execute(interaction, config, client);
+
             case 'google':
                 return await searchGoogle.execute(interaction, config, client);
+
             case 'urban':
                 return await searchUrban.execute(interaction, config, client);
+
             default:
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand' });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.UNKNOWN,
+                    message: 'Sous-commande inconnue.',
+                });
         }
-    }
+    },
 };
