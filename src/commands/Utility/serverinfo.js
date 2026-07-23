@@ -5,54 +5,73 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
     data: new SlashCommandBuilder()
-    .setName("serverinfo")
-    .setDescription("Get detailed information about the server"),
+        .setName("serverinfo")
+        .setDescription("Obtenir des informations détaillées sur le serveur"),
 
-  async execute(interaction) {
-    const deferSuccess = await InteractionHelper.safeDefer(interaction);
-    if (!deferSuccess) {
-      logger.warn(`ServerInfo interaction defer failed`, {
-        userId: interaction.user.id,
-        guildId: interaction.guildId,
-        commandName: 'serverinfo'
-      });
-      return;
-    }
+    async execute(interaction) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
 
-    const guild = interaction.guild;
-    const owner = await guild.fetchOwner();
+        if (!deferSuccess) {
+            logger.warn(`Échec de l'interaction ServerInfo`, {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'serverinfo'
+            });
+            return;
+        }
 
-    const createdTimestamp = Math.floor(guild.createdAt.getTime() / 1000);
+        const guild = interaction.guild;
+        const owner = await guild.fetchOwner();
 
-    const embed = createEmbed({ title: `Server Info: ${guild.name}`, description: `Server ID: ${guild.id}` })
-      .setThumbnail(guild.iconURL({ size: 256 }))
-      .addFields(
-        { name: "Owner", value: owner.user.tag, inline: true },
-        { name: "Members", value: `${guild.memberCount}`, inline: true },
-        {
-          name: "Channels",
-          value: `${guild.channels.cache.size}`,
-          inline: true,
-        },
-        { name: "Roles", value: `${guild.roles.cache.size}`, inline: true },
-        {
-          name: "Boosts",
-          value: `Level ${guild.premiumTier} (${guild.premiumSubscriptionCount})`,
-          inline: true,
-        },
-        {
-          name: "Creation Date",
-          value: `<t:${createdTimestamp}:R>`,
-          inline: true,
-        },
-      );
+        const createdTimestamp = Math.floor(guild.createdAt.getTime() / 1000);
 
-    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-    logger.info(`ServerInfo command executed`, {
-      userId: interaction.user.id,
-      guildId: guild.id,
-      guildName: guild.name,
-      memberCount: guild.memberCount
-    });
-  },
+        const embed = createEmbed({
+            title: `Informations du serveur : ${guild.name}`,
+            description: `ID du serveur : ${guild.id}`
+        })
+            .setThumbnail(guild.iconURL({ size: 256 }))
+            .addFields(
+                {
+                    name: "Propriétaire",
+                    value: owner.user.tag,
+                    inline: true
+                },
+                {
+                    name: "Membres",
+                    value: `${guild.memberCount}`,
+                    inline: true
+                },
+                {
+                    name: "Salons",
+                    value: `${guild.channels.cache.size}`,
+                    inline: true
+                },
+                {
+                    name: "Rôles",
+                    value: `${guild.roles.cache.size}`,
+                    inline: true
+                },
+                {
+                    name: "Boosts",
+                    value: `Niveau ${guild.premiumTier} (${guild.premiumSubscriptionCount})`,
+                    inline: true
+                },
+                {
+                    name: "Date de création",
+                    value: `<t:${createdTimestamp}:R>`,
+                    inline: true
+                },
+            );
+
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [embed]
+        });
+
+        logger.info(`Commande ServerInfo exécutée`, {
+            userId: interaction.user.id,
+            guildId: guild.id,
+            guildName: guild.name,
+            memberCount: guild.memberCount
+        });
+    },
 };
