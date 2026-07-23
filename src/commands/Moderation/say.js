@@ -4,6 +4,7 @@ import {
     ChannelType,
     MessageFlags,
 } from 'discord.js';
+
 import { successEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -18,11 +19,15 @@ const TEXT_CHANNEL_TYPES = [
 
 function resolveTargetChannel(interaction) {
     const selected = interaction.options.getChannel('channel');
+
     if (selected) {
         return selected;
     }
 
-    if (!interaction.channel || !TEXT_CHANNEL_TYPES.includes(interaction.channel.type)) {
+    if (
+        !interaction.channel ||
+        !TEXT_CHANNEL_TYPES.includes(interaction.channel.type)
+    ) {
         return null;
     }
 
@@ -32,36 +37,52 @@ function resolveTargetChannel(interaction) {
 export default {
     data: new SlashCommandBuilder()
         .setName('say')
-        .setDescription('Send a plain message as the bot')
+        .setDescription('Envoyer un message simple en tant que bot')
+
         .addStringOption((option) =>
             option
                 .setName('message')
-                .setDescription('The message the bot should send')
+                .setDescription('Le message que le bot doit envoyer')
                 .setRequired(true)
                 .setMaxLength(2000),
         )
+
         .addChannelOption((option) =>
             option
                 .setName('channel')
-                .setDescription('Channel to send in (defaults to the current channel)')
+                .setDescription('Salon où envoyer le message (par défaut : salon actuel)')
                 .addChannelTypes(...TEXT_CHANNEL_TYPES)
                 .setRequired(false),
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+
+        .setDefaultMemberPermissions(
+            PermissionFlagsBits.ManageMessages
+        )
+
         .setDMPermission(false),
+
     category: 'moderation',
-    abuseProtection: { maxAttempts: 8, windowMs: 60_000 },
+
+    abuseProtection: {
+        maxAttempts: 8,
+        windowMs: 60_000
+    },
 
     async execute(interaction, _config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction, {
             flags: MessageFlags.Ephemeral,
         });
+
         if (!deferSuccess) {
-            logger.warn('Say interaction defer failed', {
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
-                commandName: 'say',
-            });
+            logger.warn(
+                'Échec du defer de l\'interaction Say',
+                {
+                    userId: interaction.user.id,
+                    guildId: interaction.guildId,
+                    commandName: 'say',
+                }
+            );
+
             return;
         }
 
@@ -71,47 +92,68 @@ export default {
         if (!message) {
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'Message cannot be empty.',
+                message: 'Le message ne peut pas être vide.',
             });
         }
 
         const channel = resolveTargetChannel(interaction);
+
         if (!channel) {
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'Choose a text channel or run this command in one.',
+                message: 'Veuillez sélectionner un salon textuel ou exécuter cette commande dans un salon textuel.',
             });
         }
 
-        const memberPermissions = channel.permissionsFor(interaction.member);
-        const botPermissions = channel.permissionsFor(interaction.guild.members.me);
+        const memberPermissions =
+            channel.permissionsFor(interaction.member);
 
-        if (!memberPermissions?.has(PermissionFlagsBits.SendMessages)) {
+        const botPermissions =
+            channel.permissionsFor(interaction.guild.members.me);
+
+        if (
+            !memberPermissions?.has(
+                PermissionFlagsBits.SendMessages
+            )
+        ) {
             return replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
-                message: `You do not have permission to send messages in ${channel}.`,
+                message: `Vous n'avez pas la permission d'envoyer des messages dans ${channel}.`,
             });
         }
 
-        if (!botPermissions?.has(PermissionFlagsBits.SendMessages)) {
+        if (
+            !botPermissions?.has(
+                PermissionFlagsBits.SendMessages
+            )
+        ) {
             return replyUserError(interaction, {
                 type: ErrorTypes.PERMISSION,
-                message: `I do not have permission to send messages in ${channel}.`,
+                message: `Je n'ai pas la permission d'envoyer des messages dans ${channel}.`,
             });
         }
 
-        const sentMessage = await channel.send({ content: message });
+        const sentMessage = await channel.send({
+            content: message
+        });
 
         await logEvent({
             client,
             guild: interaction.guild,
+
             event: {
-                action: 'Bot Message Sent',
+                action: 'Message envoyé par le bot',
+
                 target: `${channel} (${channel.id})`,
-                executor: `${interaction.user.tag} (${interaction.user.id})`,
-                reason: message.length > 200
-                    ? `${message.slice(0, 197)}...`
-                    : message,
+
+                executor:
+                    `${interaction.user.tag} (${interaction.user.id})`,
+
+                reason:
+                    message.length > 200
+                        ? `${message.slice(0, 197)}...`
+                        : message,
+
                 metadata: {
                     channelId: channel.id,
                     messageId: sentMessage.id,
@@ -124,10 +166,11 @@ export default {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    'Message Sent',
-                    `Posted in ${channel}. [Jump to message](${sentMessage.url})`,
+                    'Message envoyé',
+                    `Message publié dans ${channel}. [Accéder au message](${sentMessage.url})`,
                 ),
             ],
+
             flags: MessageFlags.Ephemeral,
         });
     },
