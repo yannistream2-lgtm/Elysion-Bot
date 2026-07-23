@@ -1,5 +1,11 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    MessageFlags,
+    ChannelType
+} from 'discord.js';
+
 import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 
@@ -9,80 +15,146 @@ import { handleUpdate } from './modules/serverstats_update.js';
 import { handleDelete } from './modules/serverstats_delete.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { replyUserError, ErrorTypes } from '../../utils/errorHandler.js';
+import {
+    replyUserError,
+    ErrorTypes
+} from '../../utils/errorHandler.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("serverstats")
-        .setDescription("Manage server statistics that track member counts and channel data")
+        .setDescription(
+            "Gérer les statistiques du serveur, comme le nombre de membres et les données des salons"
+        )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+
+        // ─────────────────────────────────────────────
+        // CRÉER
+        // ─────────────────────────────────────────────
         .addSubcommand(subcommand =>
             subcommand
                 .setName("create")
-                .setDescription("Create a new statistics tracker channel in a category")
+                .setDescription(
+                    "Créer un nouveau compteur de statistiques dans une catégorie"
+                )
                 .addStringOption(option =>
                     option
                         .setName("type")
-                        .setDescription("The type of statistics to track")
+                        .setDescription(
+                            "Choisir le type de statistiques à suivre"
+                        )
                         .setRequired(true)
                         .addChoices(
-                            { name: "members + bots", value: "members" },
-                            { name: "members only", value: "members_only" },
-                            { name: "bots only", value: "bots" }
+                            {
+                                name: "Membres + bots",
+                                value: "members"
+                            },
+                            {
+                                name: "Membres uniquement",
+                                value: "members_only"
+                            },
+                            {
+                                name: "Bots uniquement",
+                                value: "bots"
+                            }
                         )
                 )
                 .addStringOption(option =>
                     option
                         .setName("channel_type")
-                        .setDescription("The channel type to create for this tracker")
+                        .setDescription(
+                            "Choisir le type de salon à créer pour ce compteur"
+                        )
                         .setRequired(true)
                         .addChoices(
-                            { name: "voice channel (recommended)", value: "voice" },
-                            { name: "text channel", value: "text" }
+                            {
+                                name: "Salon vocal (recommandé)",
+                                value: "voice"
+                            },
+                            {
+                                name: "Salon textuel",
+                                value: "text"
+                            }
                         )
                 )
                 .addChannelOption(option =>
                     option
                         .setName("category")
-                        .setDescription("The category where the statistics tracker channel will be created")
+                        .setDescription(
+                            "Choisir la catégorie où le salon de statistiques sera créé"
+                        )
                         .setRequired(true)
                         .addChannelTypes(ChannelType.GuildCategory)
                 )
         )
+
+        // ─────────────────────────────────────────────
+        // LISTE
+        // ─────────────────────────────────────────────
         .addSubcommand(subcommand =>
             subcommand
                 .setName("list")
-                .setDescription("List all statistics trackers for this server")
+                .setDescription(
+                    "Afficher tous les compteurs de statistiques de ce serveur"
+                )
         )
+
+        // ─────────────────────────────────────────────
+        // MODIFIER
+        // ─────────────────────────────────────────────
         .addSubcommand(subcommand =>
             subcommand
                 .setName("update")
-                .setDescription("Update an existing statistics tracker")
+                .setDescription(
+                    "Modifier un compteur de statistiques existant"
+                )
                 .addStringOption(option =>
                     option
                         .setName("counter-id")
-                        .setDescription("The ID of the tracker to update")
+                        .setDescription(
+                            "Identifiant du compteur à modifier"
+                        )
                         .setRequired(true)
                 )
                 .addStringOption(option =>
                     option
                         .setName("type")
-                        .setDescription("The new tracker type")
+                        .setDescription(
+                            "Nouveau type de statistiques à suivre"
+                        )
                         .setRequired(false)
                         .addChoices(
-                            { name: "members + bots", value: "members" },
-                            { name: "members only", value: "members_only" },
-                            { name: "bots only", value: "bots" }
+                            {
+                                name: "Membres + bots",
+                                value: "members"
+                            },
+                            {
+                                name: "Membres uniquement",
+                                value: "members_only"
+                            },
+                            {
+                                name: "Bots uniquement",
+                                value: "bots"
+                            }
                         )
                 )
         )
+
+        // ─────────────────────────────────────────────
+        // SUPPRIMER
+        // ─────────────────────────────────────────────
         .addSubcommand(subcommand =>
             subcommand
                 .setName("delete")
-                .setDescription("Delete an existing statistics tracker")
+                .setDescription(
+                    "Supprimer un compteur de statistiques existant"
+                )
                 .addStringOption(option =>
                     option
                         .setName("counter-id")
-                        .setDescription("The ID of the tracker to delete")
+                        .setDescription(
+                            "Identifiant du compteur à supprimer"
+                        )
                         .setRequired(true)
                 )
         ),
@@ -94,17 +166,24 @@ export default {
             case "create":
                 await handleCreate(interaction, client);
                 break;
+
             case "list":
                 await handleList(interaction, client);
                 break;
+
             case "update":
                 await handleUpdate(interaction, client);
                 break;
+
             case "delete":
                 await handleDelete(interaction, client);
                 break;
+
             default:
-                await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Unknown subcommand.' });
+                await replyUserError(interaction, {
+                    type: ErrorTypes.VALIDATION,
+                    message: "Sous-commande inconnue."
+                });
         }
     }
 };
