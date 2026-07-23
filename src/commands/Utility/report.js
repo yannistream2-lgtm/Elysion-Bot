@@ -8,39 +8,42 @@ import reportSetchannel from './modules/report_setchannel.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('report')
-        .setDescription('Report a user to server staff, or configure where reports are sent.')
+        .setDescription('Signaler un utilisateur au staff du serveur ou configurer le salon des signalements.')
         .setDMPermission(false)
+
         .addSubcommand(subcommand =>
             subcommand
                 .setName('file')
-                .setDescription('Report a user to the server moderation team.')
+                .setDescription('Signaler un utilisateur à l\'équipe de modération du serveur.')
                 .addUserOption(option =>
                     option
                         .setName('user')
-                        .setDescription('The user you want to report.')
+                        .setDescription('L\'utilisateur que vous souhaitez signaler.')
                         .setRequired(true),
                 )
                 .addStringOption(option =>
                     option
                         .setName('reason')
-                        .setDescription('The reason for the report (be detailed).')
+                        .setDescription('La raison du signalement (soyez précis).')
                         .setRequired(true)
                         .setMaxLength(500),
                 ),
         )
+
         .addSubcommand(subcommand =>
             subcommand
                 .setName('setchannel')
-                .setDescription('Set the channel where user reports are sent. (Manage Server required)')
+                .setDescription('Définir le salon où les signalements seront envoyés. (Permission Gérer le serveur requise)')
                 .addChannelOption(option =>
                     option
                         .setName('channel')
-                        .setDescription('The text channel to receive reports.')
+                        .setDescription('Le salon textuel qui recevra les signalements.')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(true),
                 ),
         ),
-    category: 'Utility',
+
+    category: 'Utilitaire',
 
     async execute(interaction, config, client) {
         const subcommand = interaction.options.getSubcommand();
@@ -53,6 +56,9 @@ export default {
             return await reportSetchannel.execute(interaction, config, client);
         }
 
-        return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Unknown subcommand.' });
+        return await replyUserError(interaction, {
+            type: ErrorTypes.UNKNOWN,
+            message: 'Sous-commande inconnue.'
+        });
     },
 };
