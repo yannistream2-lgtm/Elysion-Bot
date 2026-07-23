@@ -1,7 +1,11 @@
 import axios from 'axios';
 import { createEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { handleInteractionError, replyUserError, ErrorTypes } from '../../../utils/errorHandler.js';
+import {
+    handleInteractionError,
+    replyUserError,
+    ErrorTypes
+} from '../../../utils/errorHandler.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 
 export default {
@@ -10,15 +14,20 @@ export default {
             const term = interaction.options.getString('term');
 
             if (term.length < 2) {
-                logger.warn('Urban command - term too short', {
+                logger.warn('Commande Urban - terme trop court', {
                     userId: interaction.user.id,
                     term: term,
                     guildId: interaction.guildId
                 });
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Please enter a term with at least 2 characters.' });
+
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.UNKNOWN,
+                    message: 'Veuillez entrer un terme contenant au moins 2 caractères.'
+                });
             }
 
             let deferTimer = null;
+
             const clearDeferTimer = () => {
                 if (deferTimer) {
                     clearTimeout(deferTimer);
@@ -28,7 +37,7 @@ export default {
 
             deferTimer = setTimeout(() => {
                 InteractionHelper.safeDefer(interaction).catch((deferError) => {
-                    logger.debug('Urban command defer fallback failed', {
+                    logger.debug('Échec du report de réponse de secours de la commande Urban', {
                         error: deferError?.message,
                         interactionId: interaction.id,
                         commandName: 'urban'
@@ -40,13 +49,18 @@ export default {
                 `https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`,
                 { timeout: 5000 }
             );
+
             clearDeferTimer();
 
             if (!response.data?.list?.length) {
-                return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: `No definitions found for "${term}" on Urban Dictionary.` });
+                return await replyUserError(interaction, {
+                    type: ErrorTypes.USER_INPUT,
+                    message: `Aucune définition trouvée pour « ${term} » sur Urban Dictionary.`
+                });
             }
 
             const definition = response.data.list[0];
+
             const cleanDefinition = definition.definition.replace(/\[|\]/g, '');
             const cleanExample = definition.example.replace(/\[|\]/g, '');
 
@@ -56,39 +70,41 @@ export default {
 
             const formattedExample = cleanExample
                 ? `*"${cleanExample.replace(/\n/g, ' ').slice(0, 500)}..."*`
-                : '*No example provided*';
+                : '*Aucun exemple fourni*';
 
             const embed = createEmbed({
                 title: definition.word,
                 description: formattedDefinition,
                 color: 'info'
             })
-            .setURL(definition.permalink)
-            .addFields(
-                {
-                    name: 'Example',
-                    value: formattedExample,
-                    inline: false
-                },
-                {
-                    name: 'Stats',
-                    value: `${definition.thumbs_up.toLocaleString()} • ${definition.thumbs_down.toLocaleString()}`,
-                    inline: true
-                },
-                {
-                    name: 'Author',
-                    value: definition.author || 'Anonymous',
-                    inline: true
-                }
-            )
-            .setFooter({
-                text: 'Urban Dictionary',
-                iconURL: 'https://i.imgur.com/8aQrX3a.png'
+                .setURL(definition.permalink)
+                .addFields(
+                    {
+                        name: 'Exemple',
+                        value: formattedExample,
+                        inline: false
+                    },
+                    {
+                        name: 'Statistiques',
+                        value: `${definition.thumbs_up.toLocaleString()} • ${definition.thumbs_down.toLocaleString()}`,
+                        inline: true
+                    },
+                    {
+                        name: 'Auteur',
+                        value: definition.author || 'Anonyme',
+                        inline: true
+                    }
+                )
+                .setFooter({
+                    text: 'Urban Dictionary',
+                    iconURL: 'https://i.imgur.com/8aQrX3a.png'
+                });
+
+            await InteractionHelper.safeReply(interaction, {
+                embeds: [embed]
             });
 
-            await InteractionHelper.safeReply(interaction, { embeds: [embed] });
-
-            logger.info('Urban Dictionary definition retrieved', {
+            logger.info('Définition Urban Dictionary récupérée', {
                 userId: interaction.user.id,
                 term: term,
                 guildId: interaction.guildId,
@@ -96,7 +112,7 @@ export default {
             });
 
         } catch (error) {
-            logger.error('Urban Dictionary error', {
+            logger.error('Erreur Urban Dictionary', {
                 error: error.message,
                 stack: error.stack,
                 userId: interaction.user.id,
@@ -107,9 +123,17 @@ export default {
             });
 
             if (error.response?.status === 404 || !error.response) {
-                await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: `No definitions found for "${interaction.options.getString('term')}" on Urban Dictionary.` });
+                await replyUserError(interaction, {
+                    type: ErrorTypes.USER_INPUT,
+                    message: `Aucune définition trouvée pour « ${interaction.options.getString('term')} » sur Urban Dictionary.`
+                });
+
             } else if (error.response?.status === 429) {
-                await replyUserError(interaction, { type: ErrorTypes.RATE_LIMIT, message: 'Too many requests to Urban Dictionary. Please try again in a few minutes.' });
+                await replyUserError(interaction, {
+                    type: ErrorTypes.RATE_LIMIT,
+                    message: 'Trop de requêtes vers Urban Dictionary. Veuillez réessayer dans quelques minutes.'
+                });
+
             } else {
                 await handleInteractionError(interaction, error, {
                     commandName: 'urban',
