@@ -6,10 +6,10 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getColor } from '../../config/bot.js';
 
 const BASE_ALPHABETS = {
-    'BIN': { base: 2, prefix: '0b', name: 'Binary', alphabet: '01' },
+    'BIN': { base: 2, prefix: '0b', name: 'Binaire', alphabet: '01' },
     'OCT': { base: 8, prefix: '0o', name: 'Octal', alphabet: '0-7' },
-    'DEC': { base: 10, prefix: '', name: 'Decimal', alphabet: '0-9' },
-    'HEX': { base: 16, prefix: '0x', name: 'Hexadecimal', alphabet: '0-9A-F' },
+    'DEC': { base: 10, prefix: '', name: 'Décimal', alphabet: '0-9' },
+    'HEX': { base: 16, prefix: '0x', name: 'Hexadécimal', alphabet: '0-9A-F' },
     'B64': { base: 64, prefix: 'b64:', name: 'Base64', alphabet: 'A-Za-z0-9+/=' },
     'B36': { base: 36, prefix: '', name: 'Base36', alphabet: '0-9A-Z' },
     'B58': { base: 58, prefix: '', name: 'Base58', alphabet: '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz' },
@@ -35,7 +35,7 @@ function parseBigIntFromBase(value, baseKey) {
 
     const charset = BASE_CHARSETS[baseKey];
     if (!charset) {
-        throw new Error(`Unsupported base: ${baseKey}`);
+        throw new Error(`Base non prise en charge : ${baseKey}`);
     }
 
     const normalized = ['BIN', 'OCT', 'DEC', 'HEX', 'B36'].includes(baseKey)
@@ -48,7 +48,7 @@ function parseBigIntFromBase(value, baseKey) {
     for (const char of normalized) {
         const digit = charset.indexOf(char);
         if (digit < 0) {
-            throw new Error(`Invalid character '${char}' for base ${baseKey}`);
+            throw new Error(`Caractère invalide '${char}' pour la base ${baseKey}`);
         }
         result = (result * base) + BigInt(digit);
     }
@@ -74,7 +74,7 @@ function formatBigIntToBase(value, baseKey) {
 
     const charset = BASE_CHARSETS[baseKey];
     if (!charset) {
-        throw new Error(`Unsupported base: ${baseKey}`);
+        throw new Error(`Base non prise en charge : ${baseKey}`);
     }
 
     if (value === 0n) {
@@ -97,26 +97,26 @@ function formatBigIntToBase(value, baseKey) {
 export default {
     data: new SlashCommandBuilder()
         .setName('baseconvert')
-        .setDescription('Convert numbers between different bases')
+        .setDescription('Convertir des nombres entre différentes bases')
         .addStringOption(option =>
             option.setName('number')
-                .setDescription('The number to convert')
+                .setDescription('Le nombre à convertir')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('from')
-                .setDescription('Source base/format')
+                .setDescription('Base/format d’origine')
                 .setRequired(true)
                 .addChoices(...BASE_NAMES))
         .addStringOption(option =>
             option.setName('to')
-                .setDescription('Target base/format (default: all)')
+                .setDescription('Base/format cible (par défaut : toutes)')
                 .setRequired(false)
                 .addChoices(...BASE_NAMES)),
 
     async execute(interaction) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
-            logger.warn(`BaseConvert interaction defer failed`, {
+            logger.warn(`Échec du report de l'interaction BaseConvert`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 commandName: 'baseconvert'
@@ -137,7 +137,7 @@ export default {
         if (!cleanNumber) {
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'You must provide a number to convert.\n\n**Example:** `/baseconvert number:1010 from:BIN to:DEC`',
+                message: 'Vous devez fournir un nombre à convertir.\n\n**Exemple :** `/baseconvert number:1010 from:BIN to:DEC`',
             });
         }
 
@@ -146,23 +146,27 @@ export default {
 
         if (!regex.test(cleanNumber)) {
             let examples = '';
+
             if (fromBase === 'BIN') {
-                examples = '\n\n**Valid:** 101, 1010, 11111 | **Invalid:** 5 (digit 5 not allowed)';
+                examples = '\n\n**Valide :** 101, 1010, 11111 | **Invalide :** 5 (le chiffre 5 n’est pas autorisé)';
             } else if (fromBase === 'OCT') {
-                examples = '\n\n**Valid:** 77, 123, 755 | **Invalid:** 8 (only 0-7 allowed)';
+                examples = '\n\n**Valide :** 77, 123, 755 | **Invalide :** 8 (seuls les chiffres de 0 à 7 sont autorisés)';
             } else if (fromBase === 'DEC') {
-                examples = '\n\n**Valid:** 42, 123, 999 | **Invalid:** 12.34 (no decimals)';
+                examples = '\n\n**Valide :** 42, 123, 999 | **Invalide :** 12.34 (les nombres décimaux ne sont pas autorisés)';
             } else if (fromBase === 'HEX') {
-                examples = '\n\n**Valid:** FF, A1B2, DEADBEEF | **Invalid:** G (only 0-9, A-F)';
+                examples = '\n\n**Valide :** FF, A1B2, DEADBEEF | **Invalide :** G (seuls les caractères 0-9 et A-F sont autorisés)';
             }
-            logger.warn(`Invalid base conversion input: ${cleanNumber} for base ${fromBase}`);
+
+            logger.warn(`Entrée de conversion de base invalide : ${cleanNumber} pour la base ${fromBase}`);
+
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: `You provided: \`${cleanNumber}\`\n\nValid characters: \`${alphabet}\`${examples}`,
+                message: `Vous avez fourni : \`${cleanNumber}\`\n\nCaractères valides : \`${alphabet}\`${examples}`,
             });
         }
 
         let decimalValue;
+
         try {
             if (fromBase === 'B64') {
                 decimalValue = parseBigIntFromBase(cleanNumber, fromBase);
@@ -170,10 +174,11 @@ export default {
                 decimalValue = parseBigIntFromBase(cleanNumber, fromBase);
             }
         } catch (error) {
-            logger.error('Base conversion parse error:', error);
+            logger.error('Erreur lors de l’analyse de la conversion de base :', error);
+
             return replyUserError(interaction, {
                 type: ErrorTypes.VALIDATION,
-                message: 'The number is too large to process.\n\nTry with a smaller number.',
+                message: 'Le nombre est trop grand pour être traité.\n\nEssayez avec un nombre plus petit.',
             });
         }
 
@@ -185,26 +190,28 @@ export default {
                 result = formatBigIntToBase(decimalValue, toBase);
 
                 const embed = successEmbed(
-                    '🔄 Base Conversion Result',
-                    `**From ${fromName} (${fromBase}):** \`${fromPrefix}${cleanNumber}\`\n` +
-                    `**To ${toName} (${toBase}):** \`${toPrefix}${result}\`\n` +
-                    `**Decimal:** \`${decimalValue.toLocaleString()}\``
+                    '🔄 Résultat de la conversion',
+                    `**De ${fromName} (${fromBase}) :** \`${fromPrefix}${cleanNumber}\`\n` +
+                    `**Vers ${toName} (${toBase}) :** \`${toPrefix}${result}\`\n` +
+                    `**Décimal :** \`${decimalValue.toLocaleString()}\``
                 );
+
                 embed.setColor(getColor('success'));
 
                 await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
 
             } catch (error) {
-                logger.error(`Base conversion error to ${toName}:`, error);
+                logger.error(`Erreur lors de la conversion vers ${toName} :`, error);
+
                 await replyUserError(interaction, {
                     type: ErrorTypes.VALIDATION,
-                    message: 'The result would be too large or incompatible.\n\nTry with a smaller number or different target base.',
+                    message: 'Le résultat est trop grand ou incompatible.\n\nEssayez avec un nombre plus petit ou une autre base cible.',
                 });
             }
 
         } else {
-            let description = `**Input (${fromName}):** \`${fromPrefix}${cleanNumber}\`\n`;
-            description += `**Decimal:** \`${decimalValue.toLocaleString()}\`\n\n`;
+            let description = `**Entrée (${fromName}) :** \`${fromPrefix}${cleanNumber}\`\n`;
+            description += `**Décimal :** \`${decimalValue.toLocaleString()}\`\n\n`;
 
             for (const [baseKey, { prefix, name }] of Object.entries(BASE_ALPHABETS)) {
                 if (baseKey === fromBase) continue;
@@ -212,16 +219,17 @@ export default {
                 try {
                     let value = formatBigIntToBase(decimalValue, baseKey);
 
-                    description += `**${name} (${baseKey}):** \`${prefix}${value}\`\n`;
+                    description += `**${name} (${baseKey}) :** \`${prefix}${value}\`\n`;
                 } catch (error) {
-                    description += `**${name} (${baseKey}):** *Too large to convert*\n`;
+                    description += `**${name} (${baseKey}) :** *Nombre trop grand pour être converti*\n`;
                 }
             }
 
             const embed = successEmbed(
-                '🔄 Base Conversion Results',
+                '🔄 Résultats des conversions',
                 description
             );
+
             embed.setColor(getColor('primary'));
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
