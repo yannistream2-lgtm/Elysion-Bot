@@ -5,6 +5,7 @@ import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
 
 import { replyUserError, ErrorTypes } from '../utils/errorHandler.js';
+
 const warningDeleteSpecificHandler = {
   name: 'warning_delete_specific',
   async execute(interaction, client) {
@@ -12,17 +13,20 @@ const warningDeleteSpecificHandler = {
       const [, targetUserId, originalModeratorId] = interaction.customId.split(':');
       
       if (interaction.user.id !== originalModeratorId) {
-        return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'Only the moderator who viewed these warnings can delete them.' });
+        return await replyUserError(interaction, {
+          type: ErrorTypes.PERMISSION,
+          message: 'Seul le modérateur qui a consulté ces avertissements peut les supprimer.'
+        });
       }
 
       const modal = new ModalBuilder()
         .setCustomId(`warning_delete_modal:${targetUserId}:${interaction.user.id}`)
-        .setTitle('Delete Warning');
+        .setTitle('Supprimer un avertissement');
 
       const warningNumberInput = new TextInputBuilder()
         .setCustomId('warning_number')
-        .setLabel('Warning Number (#1, #2, etc.)')
-        .setPlaceholder('Enter the warning number to delete')
+        .setLabel('Numéro de l\'avertissement (#1, #2, etc.)')
+        .setPlaceholder('Entrez le numéro de l\'avertissement à supprimer')
         .setRequired(true)
         .setStyle(TextInputStyle.Short)
         .setMaxLength(10);
@@ -32,8 +36,11 @@ const warningDeleteSpecificHandler = {
 
       await interaction.showModal(modal);
     } catch (error) {
-      logger.error('Warning delete specific button error:', error);
-      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Failed to open delete warning modal.' });
+      logger.error('Erreur du bouton de suppression d\'avertissement :', error);
+      await replyUserError(interaction, {
+        type: ErrorTypes.UNKNOWN,
+        message: 'Impossible d\'ouvrir le formulaire de suppression de l\'avertissement.'
+      });
     }
   }
 };
@@ -45,20 +52,23 @@ const warningClearAllHandler = {
       const [, targetUserId, originalModeratorId] = interaction.customId.split(':');
       
       if (interaction.user.id !== originalModeratorId) {
-        return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'Only the moderator who viewed these warnings can clear them.' });
+        return await replyUserError(interaction, {
+          type: ErrorTypes.PERMISSION,
+          message: 'Seul le modérateur qui a consulté ces avertissements peut les supprimer.'
+        });
       }
 
       const targetUser = await client.users.fetch(targetUserId).catch(() => null);
-      const targetName = targetUser ? targetUser.username : 'this user';
+      const targetName = targetUser ? targetUser.username : 'cet utilisateur';
 
       const clearModal = new ModalBuilder()
         .setCustomId(`warning_clear_confirm_modal:${targetUserId}:${interaction.user.id}`)
-        .setTitle('Clear All Warnings')
+        .setTitle('Supprimer tous les avertissements')
         .addComponents(
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId('delete_confirmation')
-              .setLabel(`Type "DELETE" to clear all warnings`)
+              .setLabel('Tapez "DELETE" pour supprimer tous les avertissements')
               .setStyle(TextInputStyle.Short)
               .setPlaceholder('DELETE')
               .setMaxLength(6)
@@ -69,8 +79,11 @@ const warningClearAllHandler = {
 
       await interaction.showModal(clearModal);
     } catch (error) {
-      logger.error('Warning clear all button error:', error);
-      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Failed to open confirmation modal.' });
+      logger.error('Erreur du bouton de suppression de tous les avertissements :', error);
+      await replyUserError(interaction, {
+        type: ErrorTypes.UNKNOWN,
+        message: 'Impossible d\'ouvrir le formulaire de confirmation.'
+      });
     }
   }
 };
@@ -80,14 +93,20 @@ async function warningDeleteModalHandler(interaction, client) {
     const [, targetUserId, originalModeratorId] = interaction.customId.split(':');
     
     if (interaction.user.id !== originalModeratorId) {
-      return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'Only the original moderator can delete warnings.' });
+      return await replyUserError(interaction, {
+        type: ErrorTypes.PERMISSION,
+        message: 'Seul le modérateur d\'origine peut supprimer les avertissements.'
+      });
     }
 
     const warningNumberInput = interaction.fields.getTextInputValue('warning_number');
     const warningNumber = parseInt(warningNumberInput.replace('#', '').trim(), 10);
 
     if (isNaN(warningNumber) || warningNumber < 1) {
-      return await replyUserError(interaction, { type: ErrorTypes.VALIDATION, message: 'Please enter a valid warning number (e.g., 1, 2, 3).' });
+      return await replyUserError(interaction, {
+        type: ErrorTypes.VALIDATION,
+        message: 'Veuillez entrer un numéro d\'avertissement valide (ex. : 1, 2, 3).'
+      });
     }
 
     const deferSuccess = await InteractionHelper.safeDefer(interaction);
@@ -97,27 +116,41 @@ async function warningDeleteModalHandler(interaction, client) {
     const warnings = await WarningService.getWarnings(guildId, targetUserId);
 
     if (warningNumber > warnings.length) {
-      return await replyUserError(interaction, { type: ErrorTypes.USER_INPUT, message: `Warning #${warningNumber} does not exist. This user only has ${warnings.length} warning(s).` });
+      return await replyUserError(interaction, {
+        type: ErrorTypes.USER_INPUT,
+        message: `L\'avertissement #${warningNumber} n\'existe pas. Cet utilisateur possède seulement ${warnings.length} avertissement(s).`
+      });
     }
 
     const warningToDelete = warnings[warningNumber - 1];
     await WarningService.removeWarning(guildId, targetUserId, warningToDelete.id);
 
     const targetUser = await client.users.fetch(targetUserId).catch(() => null);
-    const targetName = targetUser ? targetUser.username : 'the user';
+    const targetName = targetUser ? targetUser.username : 'l\'utilisateur';
 
-    logger.info(`[MODERATION] Warning deleted for ${targetUserId} in ${guildId} by ${interaction.user.id}`, {
-      warningId: warningToDelete.id,
-      reason: warningToDelete.reason,
-      warningNumber
-    });
+    logger.info(
+      `[MODÉRATION] Avertissement supprimé pour ${targetUserId} sur ${guildId} par ${interaction.user.id}`,
+      {
+        warningId: warningToDelete.id,
+        reason: warningToDelete.reason,
+        warningNumber
+      }
+    );
 
     await interaction.editReply({
-      embeds: [successEmbed('✅ Warning Deleted', `Warning #${warningNumber} for **${targetName}** has been deleted.\n\n**Reason was:** ${warningToDelete.reason.substring(0, 100)}`)]
+      embeds: [
+        successEmbed(
+          '✅ Avertissement supprimé',
+          `L\'avertissement #${warningNumber} de **${targetName}** a été supprimé.\n\n**Raison :** ${warningToDelete.reason.substring(0, 100)}`
+        )
+      ]
     });
   } catch (error) {
-    logger.error('Warning delete modal handler error:', error);
-    await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Failed to delete warning.' });
+    logger.error('Erreur du gestionnaire de suppression d\'avertissement :', error);
+    await replyUserError(interaction, {
+      type: ErrorTypes.UNKNOWN,
+      message: 'Impossible de supprimer l\'avertissement.'
+    });
   }
 }
 
@@ -126,13 +159,19 @@ async function warningClearConfirmModalHandler(interaction, client) {
     const [, targetUserId, originalModeratorId] = interaction.customId.split(':');
     
     if (interaction.user.id !== originalModeratorId) {
-      return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'Only the original moderator can clear warnings.' });
+      return await replyUserError(interaction, {
+        type: ErrorTypes.PERMISSION,
+        message: 'Seul le modérateur d\'origine peut supprimer les avertissements.'
+      });
     }
 
     const confirmation = interaction.fields.getTextInputValue('delete_confirmation').trim();
 
     if (confirmation !== 'DELETE') {
-      return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'You must type "DELETE" exactly to confirm clearing all warnings.' });
+      return await replyUserError(interaction, {
+        type: ErrorTypes.UNKNOWN,
+        message: 'Vous devez taper exactement "DELETE" pour confirmer la suppression de tous les avertissements.'
+      });
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -141,19 +180,33 @@ async function warningClearConfirmModalHandler(interaction, client) {
     const { count } = await WarningService.clearWarnings(guildId, targetUserId);
 
     const targetUser = await client.users.fetch(targetUserId).catch(() => null);
-    const targetName = targetUser ? targetUser.username : 'the user';
+    const targetName = targetUser ? targetUser.username : 'l\'utilisateur';
 
-    logger.info(`[MODERATION] All warnings cleared for ${targetUserId} in ${guildId} by ${interaction.user.id}`);
+    logger.info(
+      `[MODÉRATION] Tous les avertissements supprimés pour ${targetUserId} sur ${guildId} par ${interaction.user.id}`
+    );
 
     await interaction.editReply({
-      embeds: [successEmbed('✅ Warnings Cleared', `All warnings for **${targetName}** have been cleared. **${count}** warning(s) removed.`)]
+      embeds: [
+        successEmbed(
+          '✅ Avertissements supprimés',
+          `Tous les avertissements de **${targetName}** ont été supprimés. **${count}** avertissement(s) supprimé(s).`
+        )
+      ]
     });
   } catch (error) {
-    logger.error('Warning clear confirm modal handler error:', error);
+    logger.error('Erreur du gestionnaire de confirmation de suppression des avertissements :', error);
+
     if (!interaction.replied && !interaction.deferred) {
-      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Failed to clear warnings.' });
+      await replyUserError(interaction, {
+        type: ErrorTypes.UNKNOWN,
+        message: 'Impossible de supprimer les avertissements.'
+      });
     } else {
-      await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: 'Failed to clear warnings.' });
+      await replyUserError(interaction, {
+        type: ErrorTypes.UNKNOWN,
+        message: 'Impossible de supprimer les avertissements.'
+      });
     }
   }
 }
