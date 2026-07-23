@@ -16,10 +16,10 @@ export default {
         if (!birthdayData) {
             const embed = new EmbedBuilder()
                 .setColor(0xFF0000)
-                .setTitle('No Birthday Found')
+                .setTitle('Aucun anniversaire trouvé')
                 .setDescription(targetUser.id === interaction.user.id 
-                    ? "You haven't set your birthday yet. Use `/birthday set` to add it!"
-                    : `${targetUser.username} hasn't set their birthday yet.`);
+                    ? "Tu as pas encore défini ton anniversaire. Utilise `/birthday set` pour l'ajouter !"
+                    : `${targetUser.username} n'a pas encore mis sa date de naissance.`);
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [embed]
             });
@@ -34,7 +34,7 @@ export default {
             embeds: [embed]
         });
 
-        logger.info('Birthday info retrieved successfully', {
+        logger.info(' anniversaire récupérées avec succès', {
             userId: interaction.user.id,
             targetUserId: targetUser.id,
             guildId,
