@@ -2,18 +2,21 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
+
 export default {
     data: new SlashCommandBuilder()
         .setName("firstmsg")
-        .setDescription("Get a link to the first message in this channel")
+        .setDescription("Obtenir le lien du premier message de ce salon")
         .setDMPermission(false)
         .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages),
-    category: "Utility",
+
+    category: "Utilitaire",
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
-            logger.warn(`FirstMsg interaction defer failed`, {
+            logger.warn(`Échec de l'interaction FirstMsg`, {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
                 commandName: 'firstmsg'
@@ -30,13 +33,19 @@ export default {
         const firstMessage = messages.first();
 
         if (!firstMessage) {
-            logger.info(`FirstMsg - no messages found in channel`, {
+            logger.info(`FirstMsg - aucun message trouvé dans le salon`, {
                 userId: interaction.user.id,
                 channelId: interaction.channelId,
                 guildId: interaction.guildId
             });
+
             return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed('First Message', "No messages found in this channel!")],
+                embeds: [
+                    successEmbed(
+                        'Premier message',
+                        "Aucun message n'a été trouvé dans ce salon !"
+                    )
+                ],
             });
         }
 
@@ -45,13 +54,13 @@ export default {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    "First Message in #" + interaction.channel.name,
-                    `Message Link: ${messageLink}`
+                    "Premier message dans #" + interaction.channel.name,
+                    `Lien du message : ${messageLink}`
                 ),
             ],
         });
 
-        logger.info(`FirstMsg command executed`, {
+        logger.info(`Commande FirstMsg exécutée`, {
             userId: interaction.user.id,
             channelId: interaction.channelId,
             messageId: firstMessage.id,
